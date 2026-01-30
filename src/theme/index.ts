@@ -1,0 +1,55 @@
+export const theme = {
+  colors: {
+    primary: '#12CCB7',
+    secondary: '#00BCD4',
+    background: '#FFFFFF',
+    backgroundDark: '#121212',
+    surface: '#F5F5F5',
+    surfaceDark: '#1E1E1E',
+    text: '#021114',
+    textDark: '#FFFFFF',
+    textSecondary: '#666666',
+    textSecondaryDark: '#AAAAAA',
+    border: '#DDDDDD',
+    borderDark: '#444444',
+    error: '#FF3B30',
+    success: '#34C759',
+    glass: 'rgba(255, 255, 255, 0.1)',
+    glassDark: 'rgba(0, 0, 0, 0.6)',
+  },
+  spacing: {
+    xs: 4,
+    s: 8,
+    m: 16,
+    l: 24,
+    xl: 32,
+    xxl: 48,
+  },
+  borderRadius: {
+    s: 8,
+    m: 16,
+    l: 24,
+    xl: 32,
+    round: 9999,
+  },
+  typography: {
+    h1: { fontSize: 32, fontWeight: 'bold' },
+    h2: { fontSize: 24, fontWeight: 'bold' },
+    h3: { fontSize: 20, fontWeight: '600' },
+    body: { fontSize: 16, fontWeight: 'normal' },
+    caption: { fontSize: 12, fontWeight: 'normal' },
+  },
+};
+
+export const darkTheme = {
+  ...theme,
+  colors: {
+    ...theme.colors,
+    background: theme.colors.backgroundDark,
+    surface: theme.colors.surfaceDark,
+    text: theme.colors.textDark,
+    textSecondary: theme.colors.textSecondaryDark,
+    border: theme.colors.borderDark,
+    glass: theme.colors.glassDark,
+  },
+};
