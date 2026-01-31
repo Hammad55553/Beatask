@@ -1,12 +1,13 @@
 import React, { useEffect } from 'react';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
-import { useColorScheme, Platform } from 'react-native';
+import { Platform } from 'react-native';
 import SplashScreen from 'react-native-splash-screen';
 import RootNavigator from './src/navigation/RootNavigator';
-import { theme, darkTheme } from './src/theme';
+import { ThemeProvider, useTheme } from './src/context/ThemeContext';
+import { LanguageProvider } from './src/context/LanguageContext';
 
-const App = () => {
-  const isDarkMode = useColorScheme() === 'dark';
+const AppContent = () => {
+  const { isDarkMode, theme } = useTheme();
 
   useEffect(() => {
     if (Platform.OS === 'android') {
@@ -21,18 +22,28 @@ const App = () => {
     ...navigationTheme,
     colors: {
       ...navigationTheme.colors,
-      background: isDarkMode ? darkTheme.colors.background : theme.colors.background,
+      background: theme.colors.background,
       primary: theme.colors.primary,
-      card: isDarkMode ? darkTheme.colors.surface : theme.colors.surface,
-      text: isDarkMode ? darkTheme.colors.text : theme.colors.text,
-      border: isDarkMode ? darkTheme.colors.border : theme.colors.border,
+      card: theme.colors.surface,
+      text: theme.colors.text,
+      border: theme.colors.border,
     }
-  }
+  };
 
   return (
     <NavigationContainer theme={customNavigationTheme}>
       <RootNavigator />
     </NavigationContainer>
+  );
+}
+
+const App = () => {
+  return (
+    <ThemeProvider>
+      <LanguageProvider>
+        <AppContent />
+      </LanguageProvider>
+    </ThemeProvider>
   );
 }
 

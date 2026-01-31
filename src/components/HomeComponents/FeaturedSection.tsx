@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet, useColorScheme } from 'react-native';
-import Swiper from 'react-native-swiper';
+import { View, Text, TouchableOpacity, Image, StyleSheet, FlatList, Animated } from 'react-native';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
+import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface Provider {
     id: string;
@@ -19,14 +20,14 @@ interface Provider {
 
 interface FeaturedSectionProps {
     title: string;
-    data: Provider[]; // We'll pass specific data for different sections
+    data: Provider[];
     type: 'provider' | 'service' | 'deal';
 }
 
 const FeaturedSection: React.FC<FeaturedSectionProps> = ({ title, data, type }) => {
     const navigation = useNavigation();
-    const scheme = useColorScheme();
-    const isDarkMode = scheme === 'dark';
+    const { isDarkMode, theme } = useTheme();
+    const { t, isRTL } = useLanguage();
     const [likedItems, setLikedItems] = useState<{ [key: string]: boolean }>({});
 
     const toggleLike = (id: string) => {
@@ -37,176 +38,282 @@ const FeaturedSection: React.FC<FeaturedSectionProps> = ({ title, data, type }) 
         (navigation as any).navigate('ProviderProfile');
     };
 
-    // Group data into pairs for the swiper slides (2 cards per slide)
-    const groupedData = [];
-    for (let i = 0; i < data.length; i += 2) {
-        groupedData.push(data.slice(i, i + 2));
-    }
+    const renderCard = ({ item, index }: { item: Provider, index: number }) => (
+        <TouchableOpacity
+            activeOpacity={0.9}
+            style={[styles.card, {
+                backgroundColor: theme.colors.surface,
+                marginLeft: index === 0 ? wp('5%') : 0,
+                marginRight: wp('4%'),
+                borderColor: theme.colors.border,
+            }]}
+            onPress={handlePress}
+        >
+            {/* Image Section */}
+            <View style={styles.imageContainer}>
+                <Image source={item.image} style={styles.image} />
+                <View style={styles.imageOverlay} />
+
+                {/* Badges */}
+                <View style={[styles.badgeLayer, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                    {type === 'deal' && item.discount ? (
+                        <View style={styles.discountBadge}>
+                            <Text style={styles.discountText}>{item.discount}</Text>
+                        </View>
+                    ) : (
+                        <View style={[styles.verifiedBadge, { backgroundColor: theme.colors.primary }]}>
+                            <Icon name="check-decagram" size={12} color="#FFF" />
+                        </View>
+                    )}
+
+                    <TouchableOpacity
+                        style={styles.likeBtn}
+                        onPress={() => toggleLike(item.id)}
+                    >
+                        <Icon
+                            name={likedItems[item.id] ? 'heart' : 'heart-outline'}
+                            size={18}
+                            color={likedItems[item.id] ? '#FF4b4b' : '#666'}
+                        />
+                    </TouchableOpacity>
+                </View>
+
+                {/* Rating Overlay */}
+                {item.rating && (
+                    <View style={[styles.ratingPill, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                        <Icon name="star" size={12} color="#FFD700" />
+                        <Text style={styles.ratingText}>
+                            {item.rating} <Text style={styles.reviewCount}>({item.reviews})</Text>
+                        </Text>
+                    </View>
+                )}
+            </View>
+
+            {/* Content Section */}
+            <View style={[styles.cardInfo, { alignItems: isRTL ? 'flex-end' : 'flex-start' }]}>
+                <Text style={[styles.cardName, { color: theme.colors.text }]} numberOfLines={1}>
+                    {item.name}
+                </Text>
+                <Text style={[styles.cardDesc, { color: theme.colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]} numberOfLines={1}>
+                    {item.description || "Expert Professional"}
+                </Text>
+
+                <View style={[styles.cardFooter, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                    {type !== 'provider' ? (
+                        <View style={{ alignItems: isRTL ? 'flex-end' : 'flex-start' }}>
+                            <View style={[styles.priceRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                                <Text style={[styles.currentPrice, { color: theme.colors.primary }]}>${item.price}</Text>
+                                {item.oldPrice && (
+                                    <Text style={styles.oldPrice}>${item.oldPrice}</Text>
+                                )}
+                            </View>
+                        </View>
+                    ) : (
+                        <View style={[styles.statusRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                            <View style={styles.onlineStatus} />
+                            <Text style={[styles.statusLabel, { color: theme.colors.textSecondary }]}>Available</Text>
+                        </View>
+                    )}
+
+                    <View style={[styles.nextBtn, { backgroundColor: theme.colors.primary + '15' }]}>
+                        <Icon name={isRTL ? "arrow-left" : "arrow-right"} size={16} color={theme.colors.primary} />
+                    </View>
+                </View>
+            </View>
+        </TouchableOpacity>
+    );
 
     return (
         <View style={styles.container}>
-            <Text style={[styles.title, { color: isDarkMode ? '#FFF' : '#000' }]}>{title}</Text>
-            <Swiper
-                style={styles.swiper}
-                showsButtons={false}
-                autoplay={false}
-                showsPagination={false}
-                loop={false}
-            >
-                {groupedData.map((group, groupIndex) => (
-                    <View key={groupIndex} style={styles.slideRow}>
-                        {group.map((item, index) => (
-                            <TouchableOpacity
-                                key={item.id}
-                                style={[styles.card, {
-                                    backgroundColor: isDarkMode ? '#2C2C2C' : '#FFF',
-                                    borderColor: isDarkMode ? '#444' : '#DDD'
-                                }]}
-                                onPress={handlePress}
-                            >
-                                <TouchableOpacity
-                                    style={styles.heartIcon}
-                                    onPress={() => toggleLike(item.id)}
-                                >
-                                    {type === 'deal' && item.discount ? (
-                                        <View style={styles.discountBadge}>
-                                            <Text style={styles.discountText}>{item.discount}</Text>
-                                        </View>
-                                    ) : (
-                                        <Icon
-                                            name={likedItems[item.id] ? 'cards-heart' : 'cards-heart-outline'}
-                                            size={wp('6%')}
-                                            color={likedItems[item.id] ? 'red' : '#12CCB7'}
-                                        />
-                                    )}
+            <View style={[styles.header, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{title}</Text>
+                <TouchableOpacity
+                    style={[styles.seeAllBtn, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}
+                    onPress={() => (navigation as any).navigate('SectionList', { title, type, data })}
+                >
+                    <Text style={[styles.seeAllText, { color: theme.colors.primary }]}>{t('cat_see_all')}</Text>
+                    <Icon name={isRTL ? "chevron-left" : "chevron-right"} size={18} color={theme.colors.primary} />
+                </TouchableOpacity>
+            </View>
 
-                                </TouchableOpacity>
-
-                                <View style={styles.imageContainer}>
-                                    <Image source={item.image} style={styles.image} />
-                                </View>
-
-                                <Text style={[styles.name, { color: isDarkMode ? '#FFF' : '#021114' }]} numberOfLines={1}>
-                                    {item.name}
-                                </Text>
-
-                                {type === 'provider' ? (
-                                    <Text style={[styles.description, { color: isDarkMode ? '#AAA' : '#555' }]} numberOfLines={2}>
-                                        {item.description}
-                                    </Text>
-                                ) : (
-                                    <>
-                                        <Text style={[styles.ratingText, { color: isDarkMode ? '#AAA' : '#555' }]}>
-                                            ⭐ {item.rating} ({item.reviews})
-                                        </Text>
-                                        <View style={styles.priceRow}>
-                                            <Text style={styles.price}>${item.price}</Text>
-                                            {item.oldPrice && (
-                                                <Text style={[styles.oldPrice, { color: isDarkMode ? '#888' : '#888' }]}>
-                                                    ${item.oldPrice}
-                                                </Text>
-                                            )}
-                                        </View>
-                                    </>
-                                )}
-                            </TouchableOpacity>
-                        ))}
-                        {/* If the last group has only 1 item, add an empty view to maintain layout */}
-                        {group.length === 1 && <View style={styles.card} />}
-                    </View>
-                ))}
-            </Swiper>
+            <FlatList
+                data={data}
+                renderItem={renderCard}
+                keyExtractor={(item) => item.id}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                decelerationRate="fast"
+                contentContainerStyle={styles.listContainer}
+            />
         </View>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
-        marginBottom: hp('2%'),
+        marginBottom: hp('3%'),
     },
-    title: {
-        fontSize: wp('4.5%'),
-        fontWeight: 'bold',
-        marginLeft: wp('3%'),
-        marginBottom: hp('1.5%'),
+    header: {
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingHorizontal: wp('5%'),
+        marginBottom: 16,
     },
-    swiper: {
-        height: hp('32%'), // Adjusted height
+    sectionTitle: {
+        fontSize: wp('4.8%'),
+        fontWeight: '800',
     },
-    slideRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between', // Change to space-between
-        paddingHorizontal: wp('3%'),
+    seeAllBtn: {
+        alignItems: 'center',
+    },
+    seeAllText: {
+        fontSize: 14,
+        fontWeight: '700',
+    },
+    listContainer: {
+        paddingBottom: 10,
     },
     card: {
-        width: '48%', // Fixed width slightly less than 50%
-        borderRadius: wp('3%'),
-        padding: wp('3%'),
+        width: wp('55%'),
+        borderRadius: 24,
+        padding: 10,
         borderWidth: 1,
-        // elevation: 2,
-        alignItems: 'center',
-        // IMPORTANT: Don't set flex: 1 here if you want gap. Width percentage is better.
-        // If using flex: 1, you need gap in container which React Native supports in new versions.
-    },
-    heartIcon: {
-        position: 'absolute',
-        top: wp('2%'),
-        right: wp('2%'),
-        zIndex: 10,
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
     },
     imageContainer: {
         width: '100%',
-        height: wp('30%'),
-        borderRadius: wp('2%'),
+        height: hp('16%'),
+        borderRadius: 18,
         overflow: 'hidden',
-        marginBottom: hp('1%'),
+        position: 'relative',
+        marginBottom: 12,
     },
     image: {
         width: '100%',
         height: '100%',
         resizeMode: 'cover',
     },
-    name: {
-        fontSize: wp('3.8%'),
-        fontWeight: 'bold',
-        marginBottom: hp('0.5%'),
-        textAlign: 'center',
+    imageOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.02)',
     },
-    description: {
-        fontSize: wp('3%'),
-        textAlign: 'center',
-    },
-    ratingText: {
-        fontSize: wp('3.2%'),
-        marginBottom: hp('0.5%'),
-    },
-    priceRow: {
-        flexDirection: 'row',
+    badgeLayer: {
+        position: 'absolute',
+        top: 8,
+        left: 8,
+        right: 8,
+        justifyContent: 'space-between',
         alignItems: 'center',
     },
-    price: {
-        color: '#12CCB7',
-        fontWeight: 'bold',
-        fontSize: wp('3.8%'),
-        marginRight: wp('2%'),
-    },
-    oldPrice: {
-        textDecorationLine: 'line-through',
-        fontSize: wp('3.5%'),
+    verifiedBadge: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1.5,
+        borderColor: '#FFF',
     },
     discountBadge: {
-        backgroundColor: 'lightgreen',
-        borderColor: 'darkgreen',
-        borderWidth: 1,
-        paddingHorizontal: 4,
-        paddingVertical: 2,
-        borderRadius: 4,
+        backgroundColor: '#FF3B30',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 8,
     },
     discountText: {
-        color: 'darkgreen',
+        color: '#FFF',
         fontSize: 10,
         fontWeight: 'bold',
-    }
+    },
+    likeBtn: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#FFF',
+        justifyContent: 'center',
+        alignItems: 'center',
+        elevation: 3,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 4,
+    },
+    ratingPill: {
+        position: 'absolute',
+        bottom: 8,
+        left: 8,
+        backgroundColor: 'rgba(255,255,255,0.95)',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 10,
+        alignItems: 'center',
+    },
+    ratingText: {
+        fontSize: 11,
+        fontWeight: '800',
+        color: '#222',
+        marginLeft: 3,
+    },
+    reviewCount: {
+        fontWeight: '400',
+        color: '#666',
+        fontSize: 10,
+    },
+    cardInfo: {
+        paddingHorizontal: 4,
+    },
+    cardName: {
+        fontSize: 15,
+        fontWeight: '800',
+        marginBottom: 2,
+    },
+    cardDesc: {
+        fontSize: 12,
+        fontWeight: '500',
+        marginBottom: 10,
+    },
+    cardFooter: {
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    priceRow: {
+        alignItems: 'baseline',
+    },
+    currentPrice: {
+        fontSize: 18,
+        fontWeight: '900',
+    },
+    oldPrice: {
+        fontSize: 12,
+        textDecorationLine: 'line-through',
+        color: '#AAA',
+        marginLeft: 6,
+    },
+    statusRow: {
+        alignItems: 'center',
+    },
+    onlineStatus: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#4CAF50',
+        marginRight: 6,
+    },
+    statusLabel: {
+        fontSize: 11,
+        fontWeight: '600',
+    },
+    nextBtn: {
+        width: 32,
+        height: 32,
+        borderRadius: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
 });
 
 export default FeaturedSection;

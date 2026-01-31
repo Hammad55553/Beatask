@@ -18,6 +18,8 @@ import UploadDocumentsScreen from '../screens/Auth/UploadDocumentsScreen';
 
 // Customer
 import CustomerTabNavigator from './CustomerTabNavigator';
+import AllCategoriesScreen from '../screens/Customer/AllCategoriesScreen';
+import SectionListScreen from '../screens/Customer/SectionListScreen';
 import CategoryDetailsScreen from '../screens/Customer/CategoryDetailsScreen';
 import SavedProvidersScreen from '../screens/Customer/SavedProvidersScreen';
 import ProviderProfileScreen from '../screens/Customer/ProviderProfileScreen';
@@ -29,6 +31,8 @@ import FilterScreen from '../screens/Customer/FilterScreen';
 // Let's assume Customer Settings is dealt with in Profile or similar.
 // Wait, I see "src/screens/Customer/ProfileSetupScreen.tsx".
 import ProfileSetupScreen from '../screens/Customer/ProfileSetupScreen';
+import InstantBookingScreen from '../screens/Customer/InstantBookingScreen';
+import BookingDetailScreen from '../screens/Customer/BookingDetailScreen';
 
 // Provider
 import DashboardScreen from '../screens/Provider/DashboardScreen';
@@ -59,6 +63,8 @@ export type RootStackParamList = {
 
     CustomerHome: undefined; // Main Tab
     CategoryDetails: undefined;
+    AllCategories: undefined;
+    SectionList: { title: string, type: 'provider' | 'service' | 'deal', data: any[] };
     SavedProviders: undefined;
     ProviderProfile: undefined; // 'Service' in old app
     BookingCalendar: undefined;
@@ -66,6 +72,8 @@ export type RootStackParamList = {
     PaymentMethods: undefined;
     Filter: undefined;
     ProfileSetup: undefined;
+    InstantBooking: { providerName?: string, serviceName?: string };
+    BookingDetail: { booking: any };
 
     ProviderDashboard: undefined;
     ProviderBookings: undefined;
@@ -93,7 +101,6 @@ const RootNavigator = () => {
                 headerStyle: { backgroundColor: currentTheme.colors.background },
                 headerTintColor: currentTheme.colors.text,
                 headerTitleAlign: 'center',
-                statusBarColor: currentTheme.colors.background,
                 headerTitleStyle: { fontWeight: 'bold' },
             }}
         >
@@ -112,14 +119,27 @@ const RootNavigator = () => {
 
             {/* Customer Flow */}
             <Stack.Screen name="CustomerHome" component={CustomerTabNavigator} options={{ headerShown: false }} />
-            <Stack.Screen name="CategoryDetails" component={CategoryDetailsScreen} options={{ title: 'Details' }} />
-            <Stack.Screen name="SavedProviders" component={SavedProvidersScreen} options={{ title: 'Saved' }} />
-            <Stack.Screen name="ProviderProfile" component={ProviderProfileScreen} options={{ title: 'Provider Profile' }} />
+            <Stack.Screen name="AllCategories" component={AllCategoriesScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="SectionList" component={SectionListScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="CategoryDetails" component={CategoryDetailsScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="SavedProviders" component={SavedProvidersScreen} options={{ headerShown: false }} />
+            <Stack.Screen
+                name="ProviderProfile"
+                component={ProviderProfileScreen}
+                options={{
+                    headerShown: false,
+                    statusBarColor: 'transparent',
+                    statusBarStyle: 'dark',
+                    statusBarTranslucent: true
+                }}
+            />
             <Stack.Screen name="BookingCalendar" component={BookingCalendarScreen} options={{ title: 'Book Service' }} />
-            <Stack.Screen name="RequestService" component={RequestServiceScreen} options={{ title: 'Request' }} />
+            <Stack.Screen name="RequestService" component={RequestServiceScreen} options={{ headerShown: false }} />
             <Stack.Screen name="PaymentMethods" component={PaymentMethodsScreen} options={{ title: 'Payment' }} />
             <Stack.Screen name="Filter" component={FilterScreen} options={{ title: 'Filter' }} />
-            <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} options={{ title: 'Profile Setup' }} />
+            <Stack.Screen name="ProfileSetup" component={ProfileSetupScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="InstantBooking" component={InstantBookingScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="BookingDetail" component={BookingDetailScreen} options={{ headerShown: false }} />
 
             {/* Provider Flow */}
             <Stack.Screen name="ProviderDashboard" component={DashboardScreen} options={{ headerShown: false }} />

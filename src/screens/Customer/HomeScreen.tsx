@@ -19,11 +19,16 @@ import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-nat
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { theme as lightTheme, darkTheme } from '../../theme';
+import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
+// Import reusable components for the Body
 // Import reusable components for the Body
 import ServiceCategories from '../../components/HomeComponents/ServiceCategories';
 import FeaturedSection from '../../components/HomeComponents/FeaturedSection';
 import HomeBannerSlider from '../../components/HomeComponents/HomeBannerSlider';
+import SideMenu from '../../components/common/SideMenu';
+import CategoryTabs from '../../components/HomeComponents/CategoryTabs';
 
 // Mock Data
 const featuredProviders = [
@@ -46,13 +51,19 @@ const halfPriceDeals = [
 
 const HomeScreen = () => {
     const navigation = useNavigation();
-    const scheme = useColorScheme();
-    const isDarkMode = scheme === 'dark';
-    const currentTheme = isDarkMode ? darkTheme : lightTheme;
+    // Replace direct useColorScheme with custom hook
+    const { isDarkMode, theme } = useTheme();
+    const currentTheme = theme;
+    const { t } = useLanguage();
+    const [searchQuery, setSearchQuery] = useState('');
+    const [activeTab, setActiveTab] = useState('All');
+
+    // ... rest of component
 
     // Search State
     const [searchText, setSearchText] = useState('');
     const [showSearchModal, setShowSearchModal] = useState(false);
+    const [isSideMenuVisible, setIsSideMenuVisible] = useState(false); // New State for SideMenu
     const [searchOptions, setSearchOptions] = useState(['Home Improvement', 'Business', 'IT and Graphic Design']);
     const [filteredOptions, setFilteredOptions] = useState(searchOptions);
 
@@ -78,7 +89,7 @@ const HomeScreen = () => {
 
     const headerTranslateY = scrollY.interpolate({
         inputRange: [0, HEADER_HIDE_DISTANCE * 0.5, HEADER_HIDE_DISTANCE],
-        outputRange: [0, -hp('8%'), -hp('10%')], // Reduced final offset to keep search bar lower
+        outputRange: [0, -hp('5%'), -hp('8%')], // Reduce upward scroll to keep search bar lower
         extrapolate: 'clamp',
     });
 
@@ -126,7 +137,7 @@ const HomeScreen = () => {
 
     const searchBarMarginBottom = scrollY.interpolate({
         inputRange: [0, HEADER_HIDE_DISTANCE * 0.5, HEADER_HIDE_DISTANCE],
-        outputRange: [hp('1%'), hp('2%'), hp('3%')],
+        outputRange: [hp('1%'), hp('0.5%'), hp('0.1%')], // Lowered position (less bottom margin)
         extrapolate: 'clamp',
     });
 
@@ -165,9 +176,9 @@ const HomeScreen = () => {
                 pointerEvents="none"
             >
                 <Image
-                    source={require('../../assets/images/category/Home1.jpg')}
+                    source={require('../../assets/images/category/main.png')}
                     style={{ width: '100%', height: '100%' }}
-                    resizeMode="cover"
+                    resizeMode={Dimensions.get('window').width > 600 ? 'stretch' : 'cover'}
                 />
                 {/* Overlay for better text readability */}
                 <View style={{ ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.3)' }} />
@@ -183,20 +194,30 @@ const HomeScreen = () => {
             >
                 <View style={styles.fixedHeader} pointerEvents="box-none">
                     {/* Top Row: Menu, Greeting, Profile */}
+                    {/* Top Row: Location Pill, Notification, Profile */}
                     <Animated.View style={[styles.headerRow, { opacity: headerContentOpacity }]} pointerEvents="box-none">
+
+                        {/* New Modern Location Pill & Greeting */}
                         <View style={styles.headerLeft}>
-                            <TouchableOpacity style={styles.menuButton}>
+                            <TouchableOpacity style={styles.menuButton} onPress={() => setIsSideMenuVisible(true)}>
                                 <Icon name="menu" size={28} color="#fff" />
                             </TouchableOpacity>
-                            <View>
-                                <Text style={styles.greet}>
-                                    Hey, <Text style={styles.bold}>Andrew!</Text>
-                                </Text>
-                                <Text style={styles.explore}>Let's explore services</Text>
+                            <View style={{ marginLeft: 15 }}>
+                                <Text style={styles.greet}>{t('greeting')}</Text>
+                                <Text style={styles.explore}>{t('greetingSub')}</Text>
                             </View>
                         </View>
-                        <View style={styles.avatarWrap}>
-                            <TouchableOpacity>
+
+                        {/* Right Side: Notification & Profile */}
+                        <View style={styles.headerRight}>
+                            <TouchableOpacity style={styles.notificationBtn}>
+                                <Icon name="bell-outline" size={24} color="#FFF" />
+                                <View style={styles.badge}>
+                                    <Text style={styles.badgeText}>3</Text>
+                                </View>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity style={styles.avatarWrap}>
                                 <Image
                                     source={require('../../assets/images/category/Frame.png')}
                                     style={styles.avatar}
@@ -248,26 +269,33 @@ const HomeScreen = () => {
                 )}
             >
                 <View style={styles.contentSection}>
+                    <CategoryTabs
+                        categories={[
+                            { id: 1, name: 'All' },
+                            { id: 2, name: 'Offers' },
+                            { id: 3, name: 'New' },
+                            { id: 4, name: 'Popular' }
+                        ]}
+                        activeCategory={activeTab}
+                        onCategoryPress={(tab) => setActiveTab(tab.name)}
+                    />
                     <ServiceCategories />
                 </View>
 
-                {/* Ads Component */}
-                <HomeBannerSlider />
-
                 <FeaturedSection
-                    title="Featured Service Providers"
+                    title={t('section_featured_providers')}
                     data={featuredProviders}
                     type="provider"
                 />
 
                 <FeaturedSection
-                    title="Most Booked Services"
+                    title={t('section_popular_services')}
                     data={mostBookedServices}
                     type="service"
                 />
 
                 <FeaturedSection
-                    title="Half Price Deals"
+                    title={t('section_half_price')}
                     data={halfPriceDeals}
                     type="deal"
                 />
@@ -322,6 +350,12 @@ const HomeScreen = () => {
                     </View>
                 </View>
             </Modal>
+
+            {/* Side Menu Drawer */}
+            <SideMenu
+                isVisible={isSideMenuVisible}
+                onClose={() => setIsSideMenuVisible(false)}
+            />
 
         </View>
     );
@@ -378,10 +412,36 @@ const styles = StyleSheet.create({
         fontSize: wp('3.5%'),
         color: '#eee',
     },
+    headerRight: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    notificationBtn: {
+        marginRight: 15,
+        position: 'relative',
+    },
+    badge: {
+        position: 'absolute',
+        top: -4,
+        right: -2,
+        backgroundColor: '#FF3B30',
+        width: 16,
+        height: 16,
+        borderRadius: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1.5,
+        borderColor: '#fff',
+    },
+    badgeText: {
+        color: '#fff',
+        fontSize: 10,
+        fontWeight: 'bold',
+    },
     avatarWrap: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+        width: 46,
+        height: 46,
+        borderRadius: 23,
         borderWidth: 2,
         borderColor: '#fff',
         overflow: 'hidden',

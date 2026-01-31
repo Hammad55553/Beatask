@@ -1,323 +1,492 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, FlatList, TouchableOpacity, Modal } from 'react-native';
+import { View, Text, StyleSheet, Image, FlatList, TouchableOpacity, Modal, StatusBar, Platform, SafeAreaView } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { useColorScheme } from 'react-native';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
-import { useNavigation } from '@react-navigation/native'; // Import useNavigation hook if using React Navigation
+import { useNavigation, useRoute } from '@react-navigation/native';
+import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface Item {
     id: string;
     name: string;
+    profession: string;
     description: string;
     image: any;
     rating: number;
     reviews: number;
     price: number;
-    highlyRated?: boolean;
+    hourlyFrom: number;
+    verified: boolean;
 }
 
-const data: Item[] = [
+const mockProviders: Item[] = [
     {
         id: '1',
         name: 'Benjamin Wilson',
-        description: 'Expert in residential cleaning services, lawn care and trimming.',
-        image: require('../../assets/images/category/booked.png'),
-        rating: 4.5,
-        reviews: 24,
-        price: 20,
+        profession: 'Professional Cleaner',
+        description: 'Specialized in deep cleaning and organizing. 5 years experience.',
+        image: { uri: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=500' },
+        rating: 4.8,
+        reviews: 124,
+        price: 25,
+        hourlyFrom: 20,
+        verified: true,
     },
     {
         id: '2',
-        name: 'Maryland Winkles',
-        description: 'Expert in residential cleaning services, lawn care and trimming.',
-        image: require('../../assets/images/category/booked.png'),
-        rating: 5.0,
-        reviews: 32,
-        price: 20,
-        highlyRated: true,
+        name: 'John Doe',
+        profession: 'Certified Plumber',
+        description: 'Emergency plumbing repairs and installations.',
+        image: { uri: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=500' },
+        rating: 4.9,
+        reviews: 89,
+        price: 45,
+        hourlyFrom: 40,
+        verified: true,
     },
     {
         id: '3',
-        name: 'John Doe',
-        description: 'Expert in gardening and landscaping.',
-        image: require('../../assets/images/category/booked.png'),
-        rating: 4.8,
-        reviews: 45,
-        price: 25,
+        name: 'Michael Chen',
+        profession: 'Electrician',
+        description: 'Industrial and residential wiring expert.',
+        image: { uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500' },
+        rating: 4.7,
+        reviews: 56,
+        price: 35,
+        hourlyFrom: 30,
+        verified: false,
     },
     {
         id: '4',
-        name: 'Jane Smith',
-        description: 'Expert in interior design and home decor.',
-        image: require('../../assets/images/category/booked.png'),
-        rating: 4.2,
-        reviews: 50,
-        price: 30,
+        name: 'Emily Parker',
+        profession: 'Event Planner',
+        description: 'Making your special days unforgettable.',
+        image: { uri: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=500' },
+        rating: 5.0,
+        reviews: 42,
+        price: 60,
+        hourlyFrom: 50,
+        verified: true,
     },
     {
         id: '5',
-        name: 'Emily Johnson',
-        description: 'Expert in pet grooming and care.',
-        image: require('../../assets/images/category/booked.png'),
-        rating: 4.9,
-        reviews: 20,
-        price: 15,
-    },
-    {
-        id: '6',
-        name: 'Michael Brown',
-        description: 'Expert in electrical repairs and installations.',
-        image: require('../../assets/images/category/booked.png'),
+        name: 'David Miller',
+        profession: 'Carpenter',
+        description: 'Custom furniture and woodwork restoration.',
+        image: { uri: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=500' },
         rating: 4.6,
-        reviews: 28,
+        reviews: 31,
         price: 40,
-    },
-    {
-        id: '7',
-        name: 'Sarah Davis',
-        description: 'Expert in plumbing and pipe fitting.',
-        image: require('../../assets/images/category/booked.png'),
-        rating: 4.3,
-        reviews: 22,
-        price: 35,
-    },
-    {
-        id: '8',
-        name: 'David Martinez',
-        description: 'Expert in home renovation and construction.',
-        image: require('../../assets/images/category/booked.png'),
-        rating: 4.7,
-        reviews: 38,
-        price: 50,
+        hourlyFrom: 35,
+        verified: true,
     },
 ];
 
-const HomeScreen: React.FC = () => {
-    const [sortVisible, setSortVisible] = useState(false);
-    const [sortValue, setSortValue] = useState('rating');
-    const colorScheme = useColorScheme();
-    const isDarkMode = colorScheme === 'dark';
-    const navigation = useNavigation(); // Initialize useNavigation hook
+const ProviderCard = ({ item, index, theme, onPress, t, isRTL }: any) => {
+    const scale = useSharedValue(1);
 
-    const handleSortChange = (value: string) => {
-        setSortValue(value);
-        setSortVisible(false);
-        // Add sorting logic here
-    };
+    const animatedStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: scale.value }],
+    }));
 
-    const renderItem = ({ item }: { item: Item }) => (
-        <View style={[styles.card, isDarkMode && styles.cardDark]}>
-            <Image source={item.image} style={styles.image} />
-            <Text style={[styles.name, isDarkMode && styles.textDark]}>{item.name}</Text>
-            <Text style={[styles.description, isDarkMode && styles.textDark]}>{item.description}</Text>
-            <View style={styles.ratingContainer}>
-                <Text style={[styles.rating, isDarkMode && styles.textDark]}>{item.rating}</Text>
-                <Icon name="star" size={20} color="#ffd700" />
-                <Text style={[styles.reviews, isDarkMode && styles.textDark]}>({item.reviews})</Text>
-            </View>
-            <Text style={[styles.price, isDarkMode && styles.textDark1]}>${item.price}</Text>
-            <TouchableOpacity style={[styles.button, isDarkMode && styles.buttonDark]} onPress={handleView}>
-                <Text style={styles.buttonText}  >VIEW</Text>
+    const handlePressIn = () => { scale.value = withSpring(0.98); };
+    const handlePressOut = () => { scale.value = withSpring(1); };
+
+    return (
+        <Animated.View
+            entering={FadeInDown.delay(index * 100).duration(500).springify()}
+            style={styles.cardContainer}
+        >
+            <TouchableOpacity
+                activeOpacity={1}
+                onPress={onPress}
+                onPressIn={handlePressIn}
+                onPressOut={handlePressOut}
+            >
+                <Animated.View style={[
+                    styles.cardInner,
+                    animatedStyle,
+                    {
+                        backgroundColor: theme.colors.surface,
+                        borderColor: theme.colors.border,
+                        flexDirection: isRTL ? 'row-reverse' : 'row'
+                    }
+                ]}>
+                    <View style={styles.imageWrapper}>
+                        <Image source={item.image} style={styles.image} resizeMode="cover" />
+                        <View style={[styles.priceBadge, { backgroundColor: theme.colors.primary }]}>
+                            <Text style={styles.priceValue}>${item.hourlyFrom}</Text>
+                            <Text style={styles.priceUnit}>/hr</Text>
+                        </View>
+                    </View>
+
+                    <View style={[styles.infoColumn, { alignItems: isRTL ? 'flex-end' : 'flex-start' }]}>
+                        <View style={[styles.topRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                            <View style={{ flex: 1, alignItems: isRTL ? 'flex-end' : 'flex-start' }}>
+                                <View style={[styles.nameRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                                    <Text style={[styles.nameText, { color: theme.colors.text }]} numberOfLines={1}>
+                                        {item.name}
+                                    </Text>
+                                    {item.verified && (
+                                        <Icon name="check-decagram" size={16} color="#12CCB7" style={{ marginHorizontal: 4 }} />
+                                    )}
+                                </View>
+                                <Text style={[styles.professionText, { color: theme.colors.primary }]} numberOfLines={1}>
+                                    {item.profession}
+                                </Text>
+                            </View>
+                            <View style={[styles.ratingPill, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                                <Icon name="star" size={14} color="#FBBF24" />
+                                <Text style={[styles.ratingVal, { color: theme.colors.text }]}>{item.rating}</Text>
+                            </View>
+                        </View>
+
+                        <Text style={[styles.descText, { color: theme.colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]} numberOfLines={2}>
+                            {item.description}
+                        </Text>
+
+                        <View style={[styles.bottomRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                            <View style={[styles.statItem, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                                <Icon name="comment-text-outline" size={14} color={theme.colors.textSecondary} />
+                                <Text style={[styles.statText, { color: theme.colors.textSecondary }]}>
+                                    {item.reviews} {t('pp_reviews')}
+                                </Text>
+                            </View>
+                            <View style={{ flex: 1 }} />
+                            <TouchableOpacity
+                                style={[styles.actionBtn, { backgroundColor: theme.colors.primary }]}
+                                onPress={onPress}
+                            >
+                                <Text style={styles.actionBtnText}>{t('cd_book_now')}</Text>
+                                <Icon name={isRTL ? "chevron-left" : "chevron-right"} size={16} color="#FFF" />
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </Animated.View>
             </TouchableOpacity>
-        </View>
+        </Animated.View>
     );
+};
 
-    const handleItemPress = (item: Item) => {
-        // Navigate or handle item press action
-    };
-    const handleView = () => {
-        navigation.navigate('Service'as never);
+const CategoryDetailsScreen = () => {
+    const navigation = useNavigation();
+    const route = useRoute();
+    const { theme, isDarkMode } = useTheme();
+    const { t, isRTL } = useLanguage();
+
+    const { category } = (route.params as { category?: string }) || {};
+    const title = category || t('cd_providers');
+
+    const [sortVisible, setSortVisible] = useState(false);
+    const [sortBy, setSortBy] = useState('Recommended');
+
+    const handleBack = () => navigation.goBack();
+
+    const getSortedProviders = () => {
+        let sorted = [...mockProviders];
+        switch (sortBy) {
+            case 'Highest Rated':
+                return sorted.sort((a, b) => b.rating - a.rating);
+            case 'Price: Low to High':
+                return sorted.sort((a, b) => a.hourlyFrom - b.hourlyFrom);
+            case 'Price: High to Low':
+                return sorted.sort((a, b) => b.hourlyFrom - a.hourlyFrom);
+            default:
+                return sorted;
+        }
     };
 
-    const handleFilterPress = () => {
-        navigation.navigate('Filter'as never);
+    const handleSort = (option: string) => {
+        setSortBy(option);
+        setSortVisible(false);
+    };
+
+    const handleProviderPress = (provider: Item) => {
+        (navigation as any).navigate('ProviderProfile', { providerId: provider.id });
     };
 
     return (
-        <View style={[styles.container, isDarkMode && styles.containerDark]}>
-            <FlatList
-                data={data}
-                renderItem={renderItem}
-                keyExtractor={(item) => item.id}
-                numColumns={2}
-                contentContainerStyle={styles.list}
+        <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+            <StatusBar
+                barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+                backgroundColor={theme.colors.background}
             />
-            <View style={styles.footer}>
-                <TouchableOpacity
-                    style={styles.footerButton}
-                    onPress={() => setSortVisible(!sortVisible)}
-                >
-                    <Icon name="sort" size={24} color="#fff" />
-                    <Text style={styles.footerButtonText}>SORT</Text>
+
+            {/* Header */}
+            <View style={[styles.header, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                <TouchableOpacity onPress={handleBack} style={[styles.iconBtn, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+                    <Icon name={isRTL ? "chevron-right" : "chevron-left"} size={24} color={theme.colors.text} />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.footerButton} onPress={handleFilterPress}>
-                    <Icon name="filter-variant" size={24} color="#fff" />
-                    <Text style={styles.footerButtonText}>FILTERS</Text>
+                <Text style={[styles.headerTitle, { color: theme.colors.text }]} numberOfLines={1}>{title}</Text>
+                <TouchableOpacity onPress={() => setSortVisible(true)} style={[styles.iconBtn, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+                    <Icon name="tune-vertical" size={24} color={theme.colors.text} />
                 </TouchableOpacity>
             </View>
+
+            {/* List */}
+            <FlatList
+                data={getSortedProviders()}
+                renderItem={({ item, index }) => (
+                    <ProviderCard
+                        item={item}
+                        index={index}
+                        theme={theme}
+                        t={t}
+                        isRTL={isRTL}
+                        onPress={() => handleProviderPress(item)}
+                    />
+                )}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={styles.listContent}
+                showsVerticalScrollIndicator={false}
+                ListEmptyComponent={
+                    <View style={styles.emptyContainer}>
+                        <View style={[styles.emptyIconCircle, { backgroundColor: theme.colors.primary + '10' }]}>
+                            <Icon name="account-search-outline" size={60} color={theme.colors.primary} />
+                        </View>
+                        <Text style={[styles.emptyText, { color: theme.colors.text }]}>{t('cd_no_providers')}</Text>
+                    </View>
+                }
+            />
+
+            {/* Sort Modal */}
             <Modal
                 visible={sortVisible}
                 transparent={true}
-                animationType="slide"
+                animationType="fade"
+                onRequestClose={() => setSortVisible(false)}
             >
-                <View style={styles.modalContainer}>
-                    <View style={styles.modalContent}>
-                        <View style={styles.modalHeading}>
-                            <Text style={styles.modalHeadingText}>Sort by</Text>
-                            <TouchableOpacity onPress={() => setSortVisible(false)}>
-                                <Icon name="close" size={24} color="#010A0C" />
+                <TouchableOpacity
+                    style={styles.modalOverlay}
+                    activeOpacity={1}
+                    onPress={() => setSortVisible(false)}
+                >
+                    <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
+                        <View style={styles.modalIndicator} />
+                        <Text style={[styles.modalTitle, { color: theme.colors.text }]}>{t('cd_sort')}</Text>
+                        {[t('cd_recommended'), t('cd_highest_rated'), t('cd_low_high'), t('cd_high_low')].map((opt, i) => (
+                            <TouchableOpacity
+                                key={i}
+                                style={[styles.modalOption, { borderBottomColor: theme.colors.border, flexDirection: isRTL ? 'row-reverse' : 'row' }]}
+                                onPress={() => handleSort(opt)}
+                            >
+                                <Text style={[
+                                    styles.modalOptionText,
+                                    { color: sortBy === opt ? theme.colors.primary : theme.colors.text, fontWeight: sortBy === opt ? 'bold' : 'normal' }
+                                ]}>
+                                    {opt}
+                                </Text>
+                                {sortBy === opt && <Icon name="check-circle" size={22} color={theme.colors.primary} />}
                             </TouchableOpacity>
-                        </View>
-                        <TouchableOpacity onPress={() => handleSortChange('newest')} style={styles.modalOption}>
-                            <Text style={styles.modalOptionText}>Newest listing</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => handleSortChange('mostJobs')} style={styles.modalOption}>
-                            <Text style={styles.modalOptionText}>Most jobs completed</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => handleSortChange('bestReviews')} style={styles.modalOption}>
-                            <Text style={styles.modalOptionText}>Best reviews</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => handleSortChange('highToLowPrice')} style={styles.modalOption}>
-                            <Text style={styles.modalOptionText}>High to low price</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => handleSortChange('lowToHighPrice')} style={styles.modalOption}>
-                            <Text style={styles.modalOptionText}>Low to high price</Text>
-                        </TouchableOpacity>
+                        ))}
                     </View>
-                </View>
+                </TouchableOpacity>
             </Modal>
-        </View>
+        </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
     },
-    containerDark: {
-        backgroundColor: '#010A0C',
-    },
-    list: {
-        padding: 10,
-    },
-    card: {
-        flex: 1,
-        margin: 5,
-        padding: 10,
-        backgroundColor: '#51514C',
-        borderRadius: 10,
+    header: {
+        flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: wp('5%'),
+        paddingVertical: hp('2%'),
     },
-    cardDark: {
-        backgroundColor: '#fff',
+    headerTitle: {
+        fontSize: wp('5.5%'),
+        fontWeight: '800',
+        flex: 1,
+        textAlign: 'center',
+    },
+    iconBtn: {
+        width: 44,
+        height: 44,
+        borderRadius: 14,
+        borderWidth: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 5,
+    },
+    listContent: {
+        paddingHorizontal: wp('5%'),
+        paddingTop: 10,
+        paddingBottom: hp('5%'),
+    },
+    cardContainer: {
+        marginBottom: 16,
+    },
+    cardInner: {
+        borderRadius: 24,
+        borderWidth: 1,
+        overflow: 'hidden',
+        elevation: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        padding: 12,
+    },
+    imageWrapper: {
+        width: wp('26%'),
+        height: wp('32%'),
+        borderRadius: 20,
+        overflow: 'hidden',
+        position: 'relative',
     },
     image: {
-        width: wp('40%'),
-        height: wp('40%'),
-        borderRadius: 10,
+        width: '100%',
+        height: '100%',
     },
-    name: {
-        fontSize: wp('4.5%'),
-        fontWeight: 'bold',
-        marginTop: 10,
-        color: '#fff',
-    },
-    textDark: {
-        color: '#010A0C',
-    },
-    textDark1: {
-        color: '#12CCB7',
-    },
-    description: {
-        textAlign: 'center',
-        marginVertical: 10,
-        color: '#fff',
-    },
-    ratingContainer: {
-        flexDirection: 'row',
+    priceBadge: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        paddingVertical: 4,
         alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'row',
     },
-    rating: {
-        fontSize: wp('4%'),
-        marginRight: 5,
-        color: '#fff',
-    },
-    reviews: {
-        fontSize: wp('4%'),
-        color: '#fff',
-    },
-    price: {
-        fontSize: wp('4%'),
-        fontWeight: 'bold',
-        marginVertical: 10,
-        color: '#12CCB7',
-    },
-    button: {
-        backgroundColor: '#00ced1',
-        padding: 10,
-        borderRadius: 5,
-    },
-    buttonDark: {
-        backgroundColor: '#008b8b',
-    },
-    buttonText: {
-        color: '#fff',
+    priceValue: {
+        color: '#FFF',
+        fontSize: 14,
         fontWeight: 'bold',
     },
-    footer: {
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        padding: 10,
-        backgroundColor: '#00ced1',
-        marginHorizontal: 35,
-        marginVertical: 15,
-        borderRadius: 15,
+    priceUnit: {
+        color: '#FFF',
+        fontSize: 10,
+        opacity: 0.8,
     },
-    footerButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    footerButtonText: {
-        color: '#fff',
-        marginLeft: 5,
-    },
-    modalContainer: {
+    infoColumn: {
         flex: 1,
-        justifyContent: 'flex-end',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        marginLeft: 15,
+        marginRight: 10,
+        justifyContent: 'space-between',
     },
-    modalContent: {
-        backgroundColor: '#fff',
-        padding: 20,
-        borderTopLeftRadius: 40,
-        borderTopRightRadius: 40,
+    topRow: {
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: 8,
+    },
+    nameRow: {
         alignItems: 'center',
+        flexWrap: 'wrap',
     },
-    modalHeading: {
+    nameText: {
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
+    professionText: {
+        fontSize: 13,
+        fontWeight: '600',
+        marginTop: 2,
+    },
+    ratingPill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 10,
+        borderWidth: 1,
+    },
+    ratingVal: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        marginLeft: 4,
+    },
+    descText: {
+        fontSize: 13,
+        lineHeight: 18,
+        marginBottom: 10,
+    },
+    bottomRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
+        alignItems: 'center',
         width: '100%',
+    },
+    statItem: {
         alignItems: 'center',
     },
-    modalHeadingText: {
+    statText: {
+        fontSize: 12,
+        marginLeft: 4,
+        fontWeight: '500',
+    },
+    actionBtn: {
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 14,
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginRight: -8, // Nudge slightly to the right
+    },
+    actionBtnText: {
+        color: '#FFF',
+        fontSize: 13,
+        fontWeight: 'bold',
+        marginRight: 6,
+    },
+    emptyContainer: {
+        alignItems: 'center',
+        marginTop: hp('15%'),
+    },
+    emptyIconCircle: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    emptyText: {
+        fontSize: 18,
+        fontWeight: '600',
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        borderTopLeftRadius: 32,
+        borderTopRightRadius: 32,
+        padding: 24,
+        paddingBottom: hp('5%'),
+    },
+    modalIndicator: {
+        width: 40,
+        height: 5,
+        backgroundColor: '#DDD',
+        borderRadius: 3,
+        alignSelf: 'center',
+        marginBottom: 20,
+    },
+    modalTitle: {
         fontSize: 20,
         fontWeight: 'bold',
-        marginBottom: 10,
-        color: '#010A0C',
+        marginBottom: 24,
+        textAlign: 'center',
     },
     modalOption: {
-        paddingVertical: 15,
+        paddingVertical: 18,
+        borderBottomWidth: 1,
+        alignItems: 'center',
+        justifyContent: 'space-between',
     },
     modalOptionText: {
-        fontSize: 18,
-        color: '#010A0C',
-    },
-    modalCancel: {
-        color: 'red',
-        textAlign: 'center',
-        marginTop: 10,
+        fontSize: 16,
     },
 });
 
-export default HomeScreen;
+export default CategoryDetailsScreen;

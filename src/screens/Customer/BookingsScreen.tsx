@@ -1,115 +1,253 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, Image, ScrollView, useColorScheme } from 'react-native';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { StyleSheet, View, Text, TouchableOpacity, Image, FlatList, StatusBar, Platform, Dimensions, Animated, LayoutAnimation, UIManager, SafeAreaView } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import Icons from 'react-native-vector-icons/Feather';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import { useNavigation } from '@react-navigation/native';
+import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
-const App = () => {
-    const [selectedTab, setSelectedTab] = useState('Completed');
-    const isDarkMode = useColorScheme() === 'dark';
+const { width } = Dimensions.get('window');
+
+// Enable LayoutAnimation for Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+const BookingsScreen = () => {
+    const { theme, isDarkMode } = useTheme();
+    const { t, isRTL } = useLanguage();
     const navigation = useNavigation();
+    const [selectedTab, setSelectedTab] = useState('Completed');
 
-    const handleProfile = () => {
-        navigation.navigate('Profile' as never);
+    // Standard Animated API for Tab Indicator
+    const tabTranslateX = useRef(new Animated.Value(0)).current;
+
+    const tabs = [
+        { key: 'Completed', label: t('bk_completed') },
+        { key: 'Awaiting', label: t('bk_awaiting') },
+        { key: 'Unsuccessful', label: t('bk_unsuccessful') }
+    ];
+
+    const tabWidth = (wp('92%') - 8) / 3;
+
+    useEffect(() => {
+        const index = tabs.findIndex(t => t.key === selectedTab);
+        const toValue = isRTL ? -(index * tabWidth) : index * tabWidth;
+
+        Animated.spring(tabTranslateX, {
+            toValue,
+            damping: 20,
+            stiffness: 100,
+            useNativeDriver: true,
+        }).start();
+
+        // Trigger LayoutAnimation for the list items
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    }, [selectedTab, isRTL]);
+
+    const bookings = [
+        {
+            id: '1',
+            title: 'Premium Home Deep Cleaning',
+            subtitle: 'Residential cleaning service',
+            provider: 'Maryland Winkles',
+            date: '20-06-2024',
+            time: '10:00 AM',
+            price: '$120',
+            status: 'Completed',
+            image: require('../../assets/images/category/booked.png')
+        },
+        {
+            id: '2',
+            title: 'Lawn Mowing & Grooming',
+            subtitle: 'Professional Garden Care',
+            provider: 'John Smith',
+            date: '22-06-2024',
+            time: '02:30 PM',
+            price: '$45',
+            status: 'Awaiting',
+            image: require('../../assets/images/category/booked.png')
+        },
+        {
+            id: '3',
+            title: 'Emergency Tap Repair',
+            subtitle: 'Plumbing & Kitchen Maintenance',
+            provider: 'Alex Johnson',
+            date: '18-06-2024',
+            time: '11:15 AM',
+            price: '$35',
+            status: 'Unsuccessful',
+            image: require('../../assets/images/category/booked.png')
+        }
+    ];
+
+    const filteredBookings = useMemo(() =>
+        bookings.filter(b => b.status === selectedTab),
+        [selectedTab]);
+
+    const getStatusInfo = (status: string) => {
+        switch (status) {
+            case 'Completed': return { color: '#10B981', label: t('bk_completed'), icon: 'check-all' };
+            case 'Awaiting': return { color: '#F59E0B', label: t('bk_awaiting'), icon: 'clock-fast' };
+            case 'Unsuccessful': return { color: '#EF4444', label: t('bk_redo'), icon: 'alert-circle-outline' };
+            default: return { color: '#6B7280', label: 'Unknown', icon: 'help-circle' };
+        }
     };
-    const handlechat = () => {
-        navigation.navigate('Chat' as never);
-    };
-    const handleHome = () => {
-        navigation.navigate('Home' as never);
-    };
-    const handlebooked = () => {
-        navigation.navigate('Booked' as never);
+
+    const renderItem = ({ item }: { item: any }) => {
+        const status = getStatusInfo(item.status);
+
+        return (
+            <TouchableOpacity
+                activeOpacity={0.9}
+                onPress={() => (navigation as any).navigate('BookingDetail', { booking: item })}
+                style={styles.cardWrapper}
+            >
+                <View
+                    style={[
+                        styles.card,
+                        {
+                            backgroundColor: theme.colors.surface,
+                            borderColor: theme.colors.border,
+                            flexDirection: isRTL ? 'row-reverse' : 'row'
+                        }
+                    ]}
+                >
+                    {/* Visual Side Column */}
+                    <View style={styles.sideColumn}>
+                        <Image source={item.image} style={styles.bookingImage} />
+                        <View style={[styles.statusIndicator, { backgroundColor: status.color }]} />
+                    </View>
+
+                    {/* Content Column */}
+                    <View style={[styles.mainContent, { alignItems: isRTL ? 'flex-end' : 'flex-start' }]}>
+                        <View style={[styles.cardHeader, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                            <Text style={[styles.bookingTitle, { color: theme.colors.text }]} numberOfLines={1}>
+                                {item.title}
+                            </Text>
+                        </View>
+
+                        <View style={[styles.metaRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                            <View style={[styles.metaItem, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                                <Icon name="account-circle-outline" size={14} color={theme.colors.primary} />
+                                <Text style={[styles.metaText, { color: theme.colors.text }]}>{item.provider}</Text>
+                            </View>
+                            <View style={styles.dotSeparator} />
+                            <Text style={[styles.categoryText, { color: theme.colors.textSecondary }]}>{item.subtitle}</Text>
+                        </View>
+
+                        {/* Schedule & Price Row */}
+                        <View style={[styles.scheduleRow, { backgroundColor: isDarkMode ? '#FFFFFF05' : '#F9FAFB', flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                            <View style={[styles.scheduleItem, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                                <Icon name="calendar-month-outline" size={16} color={theme.colors.textSecondary} />
+                                <Text style={[styles.scheduleText, { color: theme.colors.text }]}>{item.date}</Text>
+                            </View>
+                            <View style={[styles.scheduleItem, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                                <Icon name="clock-outline" size={16} color={theme.colors.textSecondary} />
+                                <Text style={[styles.scheduleText, { color: theme.colors.text }]}>{item.time}</Text>
+                            </View>
+                        </View>
+
+                        <View style={[styles.cardFooter, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                            <View style={[styles.statusBadge, { backgroundColor: status.color + '15', flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                                <Icon name={status.icon} size={14} color={status.color} />
+                                <Text style={[styles.statusLabel, { color: status.color }]}>{status.label}</Text>
+                            </View>
+                            <Text style={[styles.bookingPrice, { color: theme.colors.primary }]}>{item.price}</Text>
+                        </View>
+                    </View>
+
+                    {/* Floating Chat Btn */}
+                    <TouchableOpacity
+                        style={[styles.chatBtn, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+                        onPress={() => (navigation as any).navigate('Chat')}
+                    >
+                        <Icon name="message-text-outline" size={20} color={theme.colors.primary} />
+                    </TouchableOpacity>
+                </View>
+            </TouchableOpacity>
+        );
     };
 
     return (
-        <View style={[styles.container, { backgroundColor: isDarkMode ? '#010A0C' : '#FFF' }]}>
-            <View style={styles.tabsContainer}>
-                {['Completed', 'Awaiting', 'Unsuccessful'].map((tab) => (
-                    <TouchableOpacity
-                        key={tab}
-                        style={[styles.tabButton, selectedTab === tab && styles.activeTabButton]}
-                        onPress={() => setSelectedTab(tab)}
-                    >
-                        <Text style={[styles.tabButtonText, { color: isDarkMode ? '#FFF' : '#000' }]}>{tab}</Text>
+        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+            <StatusBar
+                barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+                backgroundColor="transparent"
+                translucent
+            />
+
+            <View style={styles.header}>
+                <View style={[styles.headerTop, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                    <View style={{ alignItems: isRTL ? 'flex-end' : 'flex-start' }}>
+                        <Text style={[styles.headerBrand, { color: theme.colors.primary }]}>BEATASK</Text>
+                        <Text style={[styles.headerTitle, { color: theme.colors.text }]}>{t('bk_title')}</Text>
+                    </View>
+                    <TouchableOpacity style={[styles.filterBtn, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+                        <Icon name="tune" size={22} color={theme.colors.text} />
                     </TouchableOpacity>
-                ))}
+                </View>
             </View>
-            <View />
-            <ScrollView contentContainerStyle={styles.cardsContainer}>
-                {selectedTab === 'Completed' && (
-                    <View style={styles.card}>
-                        <Image source={require('../../assets/images/category/booked.png')} style={styles.cardImage} />
-                        <View style={styles.cardContent}>
-                            <Text style={[styles.cardTitle, { color: isDarkMode ? '#FFF' : '#000' }]}>Home Management</Text>
-                            <Text style={[styles.cardSubtitle, { color: isDarkMode ? '#CCC' : '#666' }]}>Residential cleaning service</Text>
-                            <Text style={[styles.cardStatus, { color: isDarkMode ? '#FFF' : '#000' }]}>Maryland Winkles</Text>
-                            <View style={styles.cardFooter}>
-                                <Text style={styles.cardCompleted}>Completed</Text>
-                                <Text style={[styles.cardDate, { color: isDarkMode ? '#FFF' : '#000' }]}>On 20-06-2024</Text>
-                            </View>
-                        </View>
-                        <TouchableOpacity style={styles.chatButton} onPress={handlechat}>
-                            <Icon name="chat-processing-outline" size={wp('7%')} color={isDarkMode ? '#FFF' : '#000'} />
-                        </TouchableOpacity>
-                    </View>
-                )}
 
-                {selectedTab === 'Awaiting' && (
-                    <View style={styles.card}>
-                        <Image source={require('../../assets/images/category/booked.png')} style={styles.cardImage} />
-                        <View style={styles.cardContent}>
-                            <Text style={[styles.cardTitle, { color: isDarkMode ? '#FFF' : '#000' }]}>Home Management</Text>
-                            <Text style={[styles.cardSubtitle, { color: isDarkMode ? '#CCC' : '#666' }]}>Residential cleaning service</Text>
-                            <Text style={[styles.cardStatus, { color: isDarkMode ? '#FFF' : '#000' }]}>Maryland Winkles</Text>
-                            <View style={styles.cardFooter2}>
-                                <Text style={[styles.cardDate, { color: isDarkMode ? '#FFF' : '#000' }]}>On 20-06-2024</Text>
-                            </View>
-                        </View>
-                        <TouchableOpacity style={styles.chatButton} onPress={handlechat}>
-                            <Icon name="chat-processing-outline" size={wp('7%')} color={isDarkMode ? '#FFF' : '#000'} />
+            {/* Premium Tab Bar */}
+            <View style={[styles.tabsContainer, { backgroundColor: theme.colors.surface }]}>
+                <View style={[styles.tabsInner, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+                    <Animated.View
+                        style={[
+                            styles.activeIndicator,
+                            {
+                                backgroundColor: theme.colors.primary,
+                                width: tabWidth,
+                                transform: [{ translateX: tabTranslateX }]
+                            }
+                        ]}
+                    />
+                    {tabs.map((tab) => (
+                        <TouchableOpacity
+                            key={tab.key}
+                            style={styles.tabItem}
+                            onPress={() => setSelectedTab(tab.key)}
+                            activeOpacity={0.7}
+                        >
+                            <Text style={[
+                                styles.tabText,
+                                {
+                                    color: selectedTab === tab.key ? '#FFF' : theme.colors.textSecondary,
+                                    fontWeight: selectedTab === tab.key ? '800' : '600'
+                                }
+                            ]}>
+                                {tab.label}
+                            </Text>
                         </TouchableOpacity>
-                    </View>
-                )}
-
-                {selectedTab === 'Unsuccessful' && (
-                    <View style={styles.card}>
-                        <Image source={require('../../assets/images/category/booked.png')} style={styles.cardImage} />
-                        <View style={styles.cardContent}>
-                            <Text style={[styles.cardTitle, { color: isDarkMode ? '#FFF' : '#000' }]}>Home Management</Text>
-                            <Text style={[styles.cardSubtitle, { color: isDarkMode ? '#CCC' : '#666' }]}>Residential cleaning service</Text>
-                            <Text style={[styles.cardStatus, { color: isDarkMode ? '#FFF' : '#000' }]}>Maryland Winkles</Text>
-                            <View style={styles.cardFooter}>
-                                <Text style={styles.cardunsuccessful2}>Redo</Text>
-                                <Text style={[styles.cardDate, { color: isDarkMode ? '#FFF' : '#000' }]}>On 20-06-2024</Text>
-                            </View>
-                        </View>
-                        <TouchableOpacity style={styles.chatButton} onPress={handlechat}>
-                            <Icon name="chat-processing-outline" size={wp('7%')} color={isDarkMode ? '#FFF' : '#000'} />
-                        </TouchableOpacity>
-                    </View>
-                )}
-            </ScrollView>
-            <View style={[{ marginTop: hp('2%') }]} />
-            <View style={[styles.footer, { backgroundColor: isDarkMode ? '#021114' : '#FFF' }]}>
-                <TouchableOpacity style={styles.footerItem} onPress={handleHome}>
-                    <Icon name="home-outline" size={wp('7%')} color={isDarkMode ? '#FFF' : '#000'} />
-                    <Text style={[styles.footerText, { color: isDarkMode ? '#FFF' : '#000' }]}>HOME</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.footerItem} onPress={handlebooked}>
-                    <Icon name="calendar-check-outline" size={wp('7%')} color={isDarkMode ? '#FFF' : '#000'} />
-                    <Text style={[styles.footerText, { color: isDarkMode ? '#FFF' : '#000' }]}>BOOKED</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.footerItem} onPress={handlechat}>
-                    <Icon name="chat-processing-outline" size={wp('7%')} color={isDarkMode ? '#FFF' : '#000'} />
-                    <Text style={[styles.footerText, { color: isDarkMode ? '#FFF' : '#000' }]}>MESSAGE</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.footerItem} onPress={handleProfile}>
-                    <Icons name="user" size={wp('7%')} color={isDarkMode ? '#FFF' : '#000'} />
-                    <Text style={[styles.footerText, { color: isDarkMode ? '#FFF' : '#000' }]}>PROFILE</Text>
-                </TouchableOpacity>
+                    ))}
+                </View>
             </View>
+
+            <FlatList
+                data={filteredBookings}
+                renderItem={renderItem}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={styles.listContent}
+                showsVerticalScrollIndicator={false}
+                ListEmptyComponent={
+                    <View style={styles.emptyWrap}>
+                        <View style={[styles.emptyIconCircle, { backgroundColor: theme.colors.primary + '10' }]}>
+                            <Icon name="calendar-clock" size={80} color={theme.colors.primary} />
+                        </View>
+                        <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>{t('bk_no_bookings')}</Text>
+                        <Text style={[styles.emptySubtitle, { color: theme.colors.textSecondary }]}>
+                            Looks like you haven't made any {selectedTab.toLowerCase()} bookings yet.
+                        </Text>
+                        <TouchableOpacity
+                            style={[styles.exploreBtn, { backgroundColor: theme.colors.primary }]}
+                            onPress={() => (navigation as any).navigate('Home')}
+                        >
+                            <Text style={styles.exploreBtnText}>Find Services</Text>
+                            <Icon name="arrow-right" size={20} color="#FFF" style={{ marginLeft: 8 }} />
+                        </TouchableOpacity>
+                    </View>
+                }
+            />
         </View>
     );
 };
@@ -117,105 +255,228 @@ const App = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#010A0C',
+    },
+    header: {
+        paddingTop: Platform.OS === 'ios' ? hp('7%') : hp('5%'),
+        paddingBottom: hp('2%'),
+        paddingHorizontal: wp('5%'),
+    },
+    headerTop: {
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    headerBrand: {
+        fontSize: wp('3%'),
+        fontWeight: '900',
+        letterSpacing: 2,
+        marginBottom: 4,
+    },
+    headerTitle: {
+        fontSize: wp('7.5%'),
+        fontWeight: '900',
+    },
+    filterBtn: {
+        width: 48,
+        height: 48,
+        borderRadius: 16,
+        borderWidth: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        elevation: 2,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
     },
     tabsContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        paddingVertical: hp('1%'),
+        marginHorizontal: wp('4%'),
+        borderRadius: 20,
+        padding: 4,
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.08,
+        shadowRadius: 10,
+        marginBottom: 16,
     },
-    tabButton: {
-        paddingVertical: hp('1%'),
-        paddingHorizontal: wp('5%'),
-        borderRadius: wp('5%'),
-        borderColor: '#12CCB7',
-        borderWidth: 1,
+    tabsInner: {
+        height: 50,
+        position: 'relative',
     },
-    activeTabButton: {
-        backgroundColor: '#12CCB7',
-        borderColor: '#12CCB7',
-        borderWidth: 1,
+    activeIndicator: {
+        position: 'absolute',
+        height: '100%',
+        borderRadius: 16,
+        zIndex: 0,
     },
-    tabButtonText: {
-        color: '#FFF',
-        fontSize: wp('4%'),
+    tabItem: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 1,
     },
-    hr: {
-        width: wp('90%'),
-        height: hp('0.1%'),
-        backgroundColor: '#CCC',
-        alignSelf: 'center',
-        marginVertical: hp('1%'),
+    tabText: {
+        fontSize: wp('3.5%'),
     },
-    cardsContainer: {
-        padding: wp('2%'),
+    listContent: {
+        padding: wp('4%'),
+        paddingBottom: hp('15%'),
+    },
+    cardWrapper: {
+        marginBottom: 20,
     },
     card: {
-        borderRadius: wp('3%'),
-        overflow: 'hidden',
-        marginBottom: wp('2%'),
-        flexDirection: 'row',
+        borderRadius: 28,
+        padding: 12,
+        borderWidth: 1,
+        elevation: 6,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        position: 'relative',
+    },
+    sideColumn: {
         alignItems: 'center',
-        padding: wp('2%'),
     },
-    cardImage: {
-        width: wp('30%'),
-        height: hp('15%'),
-        borderRadius: wp('3%'),
-        marginRight: wp('2%'),
+    bookingImage: {
+        width: wp('22%'),
+        height: wp('26%'),
+        borderRadius: 20,
     },
-    cardContent: {
+    statusIndicator: {
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        borderWidth: 2,
+        borderColor: '#FFF',
+        position: 'absolute',
+        top: 6,
+        right: 6,
+    },
+    mainContent: {
         flex: 1,
+        marginLeft: 16,
+        marginRight: 16,
+        justifyContent: 'space-between',
     },
-    cardTitle: {
-        color: '#FFF',
-        fontSize: wp('4%'),
-        fontWeight: 'bold',
-        marginBottom: wp('2%'),
+    cardHeader: {
+        marginBottom: 4,
     },
-    cardSubtitle: {
-        color: '#CCC',
-        fontSize: wp('3%'),
-        marginBottom: wp('2%'),
+    bookingTitle: {
+        fontSize: wp('4.2%'),
+        fontWeight: '800',
     },
-    cardStatus: {
-        fontSize: wp('4%'),
-        marginBottom: wp('2%'),
+    metaRow: {
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    metaItem: {
+        alignItems: 'center',
+    },
+    metaText: {
+        fontSize: 12,
+        fontWeight: '700',
+        marginLeft: 4,
+    },
+    dotSeparator: {
+        width: 4,
+        height: 4,
+        borderRadius: 2,
+        backgroundColor: '#CCC',
+        marginHorizontal: 8,
+    },
+    categoryText: {
+        fontSize: 11,
+        fontWeight: '500',
+    },
+    scheduleRow: {
+        padding: 8,
+        borderRadius: 12,
+        justifyContent: 'space-between',
+        marginBottom: 12,
+    },
+    scheduleItem: {
+        alignItems: 'center',
+    },
+    scheduleText: {
+        fontSize: 12,
+        fontWeight: '600',
+        marginLeft: 6,
     },
     cardFooter: {
-        flexDirection: 'column',
-    },
-    cardFooter2: {
-        flexDirection: 'column',
-    },
-    cardCompleted: {
-        color: '#12CCB7',
-        fontSize: wp('4%'),
-        marginBottom: wp('2%'),
-    },
-    cardunsuccessful2: {
-        color: '#FF0000',
-        fontSize: wp('4%'),
-        marginBottom: wp('2%'),
-    },
-    cardDate: {
-        fontSize: wp('3%'),
-    },
-    chatButton: {
-        padding: wp('2%'),
-    },
-    footer: {
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        paddingVertical: hp('1%'),
-    },
-    footerItem: {
+        justifyContent: 'space-between',
         alignItems: 'center',
     },
-    footerText: {
-        fontSize: wp('3%'),
-        marginTop: hp('0.5%'),
+    statusBadge: {
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 10,
+        alignItems: 'center',
+    },
+    statusLabel: {
+        fontSize: 11,
+        fontWeight: '800',
+        marginLeft: 6,
+    },
+    bookingPrice: {
+        fontSize: 18,
+        fontWeight: '900',
+    },
+    chatBtn: {
+        position: 'absolute',
+        top: -10,
+        right: 10,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 1,
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+    },
+    emptyWrap: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: hp('10%'),
+        paddingHorizontal: wp('10%'),
+    },
+    emptyIconCircle: {
+        width: 150,
+        height: 150,
+        borderRadius: 75,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 24,
+    },
+    emptyTitle: {
+        fontSize: wp('6%'),
+        fontWeight: '900',
+        marginBottom: 10,
+    },
+    emptySubtitle: {
+        fontSize: wp('4%'),
+        textAlign: 'center',
+        lineHeight: 22,
+        marginBottom: 30,
+    },
+    exploreBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 28,
+        paddingVertical: 14,
+        borderRadius: 18,
+        elevation: 6,
+    },
+    exploreBtnText: {
+        color: '#FFF',
+        fontSize: 16,
+        fontWeight: 'bold',
     },
 });
 
-export default App;
+export default BookingsScreen;
