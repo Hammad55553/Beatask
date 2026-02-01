@@ -5,6 +5,7 @@ import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-nat
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { useCurrency } from '../../context/CurrencyContext';
 
 const { width } = Dimensions.get('window');
 
@@ -16,6 +17,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 const BookingsScreen = () => {
     const { theme, isDarkMode } = useTheme();
     const { t, isRTL } = useLanguage();
+    const { formatPrice } = useCurrency();
     const navigation = useNavigation();
     const [selectedTab, setSelectedTab] = useState('Completed');
 
@@ -53,7 +55,7 @@ const BookingsScreen = () => {
             provider: 'Maryland Winkles',
             date: '20-06-2024',
             time: '10:00 AM',
-            price: '$120',
+            price: 120,
             status: 'Completed',
             image: require('../../assets/images/category/booked.png')
         },
@@ -64,7 +66,7 @@ const BookingsScreen = () => {
             provider: 'John Smith',
             date: '22-06-2024',
             time: '02:30 PM',
-            price: '$45',
+            price: 45,
             status: 'Awaiting',
             image: require('../../assets/images/category/booked.png')
         },
@@ -75,7 +77,7 @@ const BookingsScreen = () => {
             provider: 'Alex Johnson',
             date: '18-06-2024',
             time: '11:15 AM',
-            price: '$35',
+            price: 35,
             status: 'Unsuccessful',
             image: require('../../assets/images/category/booked.png')
         }
@@ -153,7 +155,7 @@ const BookingsScreen = () => {
                                 <Icon name={status.icon} size={14} color={status.color} />
                                 <Text style={[styles.statusLabel, { color: status.color }]}>{status.label}</Text>
                             </View>
-                            <Text style={[styles.bookingPrice, { color: theme.colors.primary }]}>{item.price}</Text>
+                            <Text style={[styles.bookingPrice, { color: theme.colors.primary }]}>{formatPrice(item.price)}</Text>
                         </View>
                     </View>
 

@@ -1,125 +1,275 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  FlatList,
+  TextInput,
+  StatusBar,
+  Platform,
+  Image,
+  SafeAreaView,
+  Modal,
+  ScrollView
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Avatar } from 'react-native-elements';
-import Icons from 'react-native-vector-icons/Feather';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
-import { useColorScheme, ColorSchemeName } from 'react-native';
+import Animated, {
+  FadeInDown,
+  FadeInLeft,
+  Layout,
+  ZoomIn
+} from 'react-native-reanimated';
+import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
-const ChatScreen: React.FC = () => {
-  const colorScheme: ColorSchemeName = useColorScheme();
-  const isDarkMode: boolean = colorScheme === 'dark';
-  const navigation = useNavigation();
-  const [showTopPopup, setShowTopPopup] = useState(true);
-  const topPopupRef = useRef(null); // Ref for the top popup
+// --- Mock Data ---
+const RECENT_CLIENTS = [
+  { id: '1', name: 'John', image: require('../../assets/images/category/user.png'), online: true },
+  { id: '2', name: 'Jane', image: require('../../assets/images/category/user.png'), online: true },
+  { id: '3', name: 'Robert', image: require('../../assets/images/category/user.png'), online: false },
+  { id: '4', name: 'Emily', image: require('../../assets/images/category/user.png'), online: true },
+];
 
-  const handlePress = () => {
-    navigation.navigate('Chat1' as never);
-  };
+const CHATS = [
+  {
+    id: '1',
+    name: 'John Doe',
+    lastMessage: 'I need to reschedule the plumbing work.',
+    time: '11:45 AM',
+    unread: 1,
+    online: true,
+    image: require('../../assets/images/category/user.png'),
+    typing: true,
+  },
+  {
+    id: '2',
+    name: 'Jane Smith',
+    lastMessage: 'The quote looks good. When can you start?',
+    time: 'Yesterday',
+    unread: 0,
+    online: false,
+    image: require('../../assets/images/category/user.png'),
+    typing: false,
+  },
+  {
+    id: '3',
+    name: 'Robert Fox',
+    lastMessage: 'Thank you for the quick repair!',
+    time: 'Monday',
+    unread: 0,
+    online: true,
+    image: require('../../assets/images/category/user.png'),
+    typing: false,
+  }
+];
 
-  const closeTopPopup = () => {
-    if (topPopupRef.current) {
-      setShowTopPopup(false);
-    }
-  };
+const SafetyOverlay = ({ visible, onClose, theme, isDarkMode, t, isRTL }: any) => (
+  <Modal visible={visible} transparent animationType="fade">
+    <View style={styles.modalOverlay}>
+      <Animated.View entering={ZoomIn.duration(400)} style={[styles.safetyCard, { backgroundColor: theme.colors.surface }]}>
+        <View style={[styles.safetyHeader, { backgroundColor: isDarkMode ? '#FFB80020' : '#FFF9E5' }]}>
+          <Icon name="shield-lock" size={40} color="#FFB800" />
+          <Text style={[styles.safetyTitle, { color: '#FFB800' }]}>{t('msg_safety_title')}</Text>
+        </View>
 
+        <ScrollView style={styles.safetyContent} showsVerticalScrollIndicator={false}>
+          <Text style={[styles.safetyIntro, { color: theme.colors.text, textAlign: 'center' }]}>
+            {t('msg_safety_intro')}
+          </Text>
 
-  const handleMessage = () => {
-    navigation.navigate('masglist1' as never);
-  };
-
-  const handleProfile = () => {
-    navigation.navigate('ProfileSetup' as never);
-  };
-
-
-const handleHome = () => {
-    navigation.navigate('dashboard' as never);
-};
-const handleBooked = () => {
-    navigation.navigate('booked1' as never);
-};
-
-const handlebid = () => {
-    navigation.navigate('Bid' as never);
-};
-  return (
-    <View style={[styles.container, isDarkMode ? styles.darkContainer : styles.lightContainer]}>
-
-      {/* Chat Content */}
-      <ScrollView contentContainerStyle={styles.scrollViewContent}>
-        <View style={styles.innerContainer}>
-          <TouchableOpacity onPress={handlePress} style={styles.touchable}>
-            <View style={[styles.card, isDarkMode ? styles.darkCard : null]}>
-              <View style={styles.messageContainer}>
-                <Avatar
-                  rounded
-                  size="medium"
-                  source={require('../../assets/images/category/user.png')} // Local image path
-                  containerStyle={styles.avatar}
-                />
-                <View style={styles.textContainer}>
-                  <Text style={[styles.name, isDarkMode ? styles.darkText : null]}>
-                    Maryland Winkles
-                  </Text>
-                  <Text style={[styles.message, isDarkMode ? styles.darkText : null]}>
-                    Hi AsperTask
-                  </Text>
-                </View>
-                <Text style={[styles.time, isDarkMode ? styles.darkText : null]}>
-                  10:30 AM
-                </Text>
+          {[
+            { title: t('msg_safety_1_title'), desc: t('msg_safety_1_desc'), icon: 'cash-check' },
+            { title: t('msg_safety_2_title'), desc: t('msg_safety_2_desc'), icon: 'briefcase-account' },
+            { title: t('msg_safety_3_title'), desc: t('msg_safety_3_desc'), icon: 'shield-account' }
+          ].map((item, idx) => (
+            <View key={idx} style={[styles.safetyItem, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+              <View style={[styles.safetyIconBox, { backgroundColor: theme.colors.primary + '15' }]}>
+                <Icon name={item.icon} size={20} color={theme.colors.primary} />
+              </View>
+              <View style={[styles.safetyTextRow, { marginLeft: isRTL ? 0 : 15, marginRight: isRTL ? 15 : 0, alignItems: isRTL ? 'flex-end' : 'flex-start' }]}>
+                <Text style={[styles.safetyItemTitle, { color: theme.colors.text, textAlign: isRTL ? 'right' : 'left' }]}>{item.title}</Text>
+                <Text style={[styles.safetyItemDesc, { color: theme.colors.textSecondary, textAlign: isRTL ? 'right' : 'left' }]}>{item.desc}</Text>
               </View>
             </View>
-          </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        <TouchableOpacity style={[styles.safetyCloseBtn, { backgroundColor: theme.colors.primary }]} onPress={onClose}>
+          <Text style={styles.safetyCloseText}>{t('msg_safety_understand')}</Text>
+        </TouchableOpacity>
+      </Animated.View>
+    </View>
+  </Modal>
+);
+
+const MessageItem = ({ item, index, theme, isRTL, onPress, t }: any) => {
+  return (
+    <Animated.View
+      entering={FadeInDown.delay(index * 100).duration(600).springify()}
+      layout={Layout.springify()}
+    >
+      <TouchableOpacity
+        activeOpacity={0.8}
+        onPress={onPress}
+        style={[
+          styles.chatCard,
+          {
+            backgroundColor: theme.colors.surface,
+            flexDirection: isRTL ? 'row-reverse' : 'row'
+          }
+        ]}
+      >
+        <View style={styles.avatarContainer}>
+          <Image source={item.image} style={styles.avatar} />
+          {item.online && <View style={styles.onlineBadge} />}
+        </View>
+
+        <View style={[styles.chatInfo, { marginLeft: isRTL ? 0 : 18, marginRight: isRTL ? 18 : 0, alignItems: isRTL ? 'flex-end' : 'flex-start' }]}>
+          <View style={[styles.chatHeader, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+            <Text style={[styles.nameText, { color: theme.colors.text }]} numberOfLines={1}>
+              {item.name}
+            </Text>
+            <Text style={[styles.timeText, { color: theme.colors.textSecondary }]}>{item.time}</Text>
+          </View>
+
+          <View style={[styles.chatFooter, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+            {item.typing ? (
+              <Text style={[styles.typingText, { color: theme.colors.primary }]}>{t('msg_typing')}</Text>
+            ) : (
+              <Text
+                style={[
+                  styles.lastMsg,
+                  {
+                    color: item.unread > 0 ? theme.colors.text : theme.colors.textSecondary,
+                    fontWeight: item.unread > 0 ? '700' : '400',
+                    textAlign: isRTL ? 'right' : 'left'
+                  }
+                ]}
+                numberOfLines={1}
+              >
+                {item.lastMessage}
+              </Text>
+            )}
+            {item.unread > 0 && (
+              <View style={[styles.unreadBadge, { backgroundColor: theme.colors.primary }]}>
+                <Text style={styles.unreadText}>{item.unread}</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
+
+const ProviderMessagesListScreen: React.FC = () => {
+  const navigation = useNavigation();
+  const { theme, isDarkMode } = useTheme();
+  const { t, isRTL } = useLanguage();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [safetyVisible, setSafetyVisible] = useState(true);
+
+  const filteredChats = useMemo(() => {
+    return CHATS.filter(chat =>
+      chat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      chat.lastMessage.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [searchQuery]);
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent={true} />
+
+      <SafetyOverlay
+        visible={safetyVisible}
+        onClose={() => setSafetyVisible(false)}
+        theme={theme}
+        isDarkMode={isDarkMode}
+        t={t}
+        isRTL={isRTL}
+      />
+
+      {/* Header Content */}
+      <View style={styles.header}>
+        <View style={[styles.headerTop, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+          <View style={{ alignItems: isRTL ? 'flex-end' : 'flex-start' }}>
+            <Text style={[styles.welcomeText, { color: theme.colors.textSecondary }]}>{t('msg_chats')}</Text>
+            <Text style={[styles.headerTitle, { color: theme.colors.text }]}>{t('msg_title')}</Text>
+          </View>
+          <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+            <TouchableOpacity
+              style={[styles.iconBtn, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+              onPress={() => setSafetyVisible(true)}
+            >
+              <Icon name="shield-lock" size={22} color="#FFB800" />
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.iconBtn, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, marginLeft: isRTL ? 0 : 10, marginRight: isRTL ? 10 : 0 }]}>
+              <Icon name="cog-outline" size={22} color={theme.colors.text} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Search Bar */}
+        <View style={[styles.searchContainer, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
+          <Icon name="magnify" size={22} color={theme.colors.textSecondary} />
+          <TextInput
+            style={[styles.searchInput, { color: theme.colors.text, textAlign: isRTL ? 'right' : 'left' }]}
+            placeholder={t('msg_search_placeholder')}
+            placeholderTextColor={theme.colors.textSecondary + '80'}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
+      </View>
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: hp('12%') }}>
+        {/* Active Leads Section */}
+        <View style={styles.storiesSection}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text, textAlign: isRTL ? 'right' : 'left' }]}>{t('msg_online')}</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: isRTL ? 'row-reverse' : 'row', paddingHorizontal: wp('5%') }}>
+            {RECENT_CLIENTS.map((client, index) => (
+              <Animated.View
+                key={client.id}
+                entering={FadeInLeft.delay(index * 100).duration(500)}
+                style={[styles.storyItem, { marginRight: isRTL ? 0 : 15, marginLeft: isRTL ? 15 : 0 }]}
+              >
+                <View style={[styles.storyAvatarOuter, { borderColor: client.online ? theme.colors.primary : theme.colors.border }]}>
+                  <Image source={client.image} style={styles.storyAvatar} />
+                  {client.online && <View style={styles.storyOnlineBadge} />}
+                </View>
+                <Text style={[styles.storyName, { color: theme.colors.text }]} numberOfLines={1}>{client.name}</Text>
+              </Animated.View>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Conversations List */}
+        <View style={styles.listSection}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text, textAlign: isRTL ? 'right' : 'left', marginBottom: 10 }]}>{t('msg_conversations')}</Text>
+          {filteredChats.length > 0 ? (
+            filteredChats.map((item, index) => (
+              <MessageItem
+                key={item.id}
+                item={item}
+                index={index}
+                theme={theme}
+                isRTL={isRTL}
+                t={t}
+                onPress={() => (navigation as any).navigate('ProviderChat', { client: item })}
+              />
+            ))
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Icon name="text-box-remove-outline" size={60} color={theme.colors.textSecondary + '30'} />
+              <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>{t('msg_no_conversations')}</Text>
+            </View>
+          )}
         </View>
       </ScrollView>
-
-      {/* Top Popup */}
-      {showTopPopup && (
-        <View ref={topPopupRef} style={[styles.topPopup, isDarkMode ? styles.darkTopPopup : null]}>
-          <Icons name="info" size={52} color={isDarkMode ? '#EEB0B0' : '#ff0000'} style={styles.infoIcon} />
-          <Text style={[styles.popupTitle, isDarkMode ? styles.darkPopupTitle : styles.lightPopupTitle]}>
-            Warning: Stay Safe and Secure with ASPERTASK
-          </Text>
-          <Text style={[styles.popupText, isDarkMode ? styles.darkPopupText : styles.lightPopupText]}>
-            Before proceeding with the chat, please be aware of the following guidelines to ensure your safety and protect your interests: {'\n\n'}
-            1. No External Transactions: All transactions and payments should be made within the ASPERTASK app. ASPERTASK will not be responsible for any issues arising from payments or deals made outside the app. {'\n\n'}
-            2. Protect Your Information: Do not share personal information such as phone numbers, email addresses, or social media profiles with service providers. {'\n\n'}
-            3. Report Suspicious Behavior: If a service provider asks you to conduct transactions or share personal information outside the ASPERTASK app, please report them immediately. {'\n\n'}
-            By following these guidelines, you help us maintain a safe and trustworthy community. Close this message by clicking the ‘X’ at the top right corner.
-          </Text>
-          <TouchableOpacity onPress={closeTopPopup} style={styles.popupCloseButton}>
-            <Icons name="x" size={24} color={isDarkMode ? '#ffffff' : '#000000'} />
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* Footer */}
-      <View style={[styles.footer, isDarkMode ? styles.darkFooter : styles.lightFooter]}>
-        <TouchableOpacity style={styles.footerItem} onPress={handleHome}>
-          <Icon name="home-outline" size={wp('7%')} color={isDarkMode ? '#FFF' : '#000'} />
-          <Text style={[styles.footerText, isDarkMode ? styles.darkFooterText : styles.lightFooterText]}>HOME</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.footerItem} onPress={handleBooked}>
-          <Icon name="calendar-check-outline" size={wp('7%')} color={isDarkMode ? '#FFF' : '#000'} />
-          <Text style={[styles.footerText, isDarkMode ? styles.darkFooterText : styles.lightFooterText]}>BOOKED</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.footerItem} onPress={handleMessage}>
-          <Icon name="chat-processing-outline" size={wp('7%')} color={isDarkMode ? '#FFF' : '#000'} />
-          <Text style={[styles.footerText, isDarkMode ? styles.darkFooterText : styles.lightFooterText]}>MESSAGE</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.footerItem} onPress={handlebid}>
-                    <Icon name="briefcase-variant-outline" size={wp('7%')} color={isDarkMode ? '#FFF' : '#000'} />
-                    <Text style={[styles.footerText, { color: isDarkMode ? '#FFF' : '#000' }]}>BID</Text>
-                </TouchableOpacity>
-        <TouchableOpacity style={styles.footerItem} onPress={handleProfile}>
-          <Icons name="user" size={wp('7%')} color={isDarkMode ? '#FFF' : '#000'} />
-          <Text style={[styles.footerText, isDarkMode ? styles.darkFooterText : styles.lightFooterText]}>PROFILE</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -127,161 +277,245 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  lightContainer: {
-    backgroundColor: '#ffffff',
+  header: {
+    paddingHorizontal: wp('5%'),
+    paddingTop: hp('2%'),
+    paddingBottom: hp('2%'),
   },
-  darkContainer: {
-    backgroundColor: '#000000',
-  },
-  topSection: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  lightTopSection: {
-    backgroundColor: '#f0f0f0', // Light mode background color
-    borderBottomColor: '#ccc', // Light mode border color
-  },
-  darkTopSection: {
-    backgroundColor: '#121212', // Dark mode background color
-    borderBottomColor: '#555', // Dark mode border color
-  },
-  headerText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000000',
-  },
-  scrollViewContent: {
-    flexGrow: 1,
-    padding: 16,
-  },
-  innerContainer: {
-    flex: 1,
-  },
-  touchable: {
-    marginVertical: 8,
-  },
-  card: {
-    borderRadius: 8,
-    padding: 16,
-    backgroundColor: '#ffffff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  darkCard: {
-    backgroundColor: '#1e1e1e',
-    shadowColor: '#ffffff',
-  },
-  messageContainer: {
+  headerTop: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  welcomeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  headerTitle: {
+    fontSize: 32,
+    fontWeight: '900',
+    marginTop: 2,
+  },
+  iconBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  searchContainer: {
+    height: 54,
+    borderRadius: 18,
+    borderWidth: 1,
+    paddingHorizontal: 15,
+    alignItems: 'center',
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    marginHorizontal: 10,
+  },
+  storiesSection: {
+    paddingVertical: 10,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    marginHorizontal: wp('5%'),
+    marginBottom: 15,
+  },
+  storyItem: {
+    alignItems: 'center',
+    width: 70,
+  },
+  storyAvatarOuter: {
+    width: 66,
+    height: 66,
+    borderRadius: 33,
+    borderWidth: 2,
+    padding: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  storyAvatar: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+  },
+  storyOnlineBadge: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#4CAF50',
+    borderWidth: 2,
+    borderColor: '#FFF',
+  },
+  storyName: {
+    fontSize: 11,
+    marginTop: 6,
+    fontWeight: '600',
+  },
+  listSection: {
+    paddingTop: 10,
+  },
+  chatCard: {
+    flexDirection: 'row',
+    paddingHorizontal: wp('5%'),
+    paddingVertical: 18,
+    marginHorizontal: wp('3%'),
+    borderRadius: 24,
+    marginBottom: 8,
+  },
+  avatarContainer: {
+    position: 'relative',
   },
   avatar: {
-    backgroundColor: '#cccccc',
+    width: 64,
+    height: 64,
+    borderRadius: 22,
+    backgroundColor: '#eee',
   },
-  textContainer: {
-    marginLeft: 12,
-    flex: 1, // Allows textContainer to take up available space
+  onlineBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#4CAF50',
+    borderWidth: 3,
+    borderColor: '#FFF',
   },
-  name: {
+  chatInfo: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  chatHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  nameText: {
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  timeText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  chatFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  lastMsg: {
+    fontSize: 14,
+    flex: 1,
+    marginRight: 10,
+  },
+  typingText: {
+    fontSize: 14,
+    fontWeight: '600',
+    fontStyle: 'italic',
+  },
+  unreadBadge: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+  },
+  unreadText: {
+    color: '#FFF',
+    fontSize: 10,
+    fontWeight: '900',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    marginTop: hp('5%'),
+  },
+  emptyText: {
+    marginTop: 10,
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  safetyCard: {
+    width: '100%',
+    maxHeight: hp('70%'),
+    borderRadius: 36,
+    overflow: 'hidden',
+  },
+  safetyHeader: {
+    padding: 30,
+    alignItems: 'center',
+  },
+  safetyTitle: {
+    fontSize: 24,
+    fontWeight: '900',
+    marginTop: 10,
+  },
+  safetyContent: {
+    padding: 24,
+  },
+  safetyIntro: {
+    fontSize: 15,
+    lineHeight: 22,
+    marginBottom: 20,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  safetyItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+  },
+  safetyIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  safetyTextRow: {
+    flex: 1,
+  },
+  safetyItemTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#000000',
+    marginBottom: 4,
   },
-  message: {
-    fontSize: 14,
-    color: '#666666',
+  safetyItemDesc: {
+    fontSize: 13,
+    lineHeight: 18,
   },
-  time: {
-    fontSize: 12,
-    color: '#999999',
-    textAlign: 'right',
-  },
-  darkText: {
-    color: '#ffffff',
-  },
-  topPopup: {
-    backgroundColor: '#fff',
-    padding: wp('2.5%'),
-    flexDirection: 'column',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#12ccb7',
-    borderRadius: wp('8.5%'),
-    marginHorizontal: wp('8.5%'),
+  safetyCloseBtn: {
+    margin: 24,
+    height: 56,
+    borderRadius: 18,
     justifyContent: 'center',
-    position: 'absolute',
-    alignSelf: 'center',
-    top: hp('10%'), // Adjust this value as needed
-    zIndex: 5,
+    alignItems: 'center',
   },
-  darkTopPopup: {
-    backgroundColor: '',
-  },
-  infoIcon: {
-    marginRight: wp('2%'),
-  },
-  popupTitle: {
-    fontSize: wp('4.5%'),
+  safetyCloseText: {
+    color: '#FFF',
+    fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: hp('1%'),
-    paddingLeft: wp('2%'),
-    textAlign: 'center',
-  },
-  lightPopupTitle: {
-    color: 'red', // Red color for light mode
-  },
-  darkPopupTitle: {
-    color: '#EEB0B0',
-  },
-  popupText: {
-    fontSize: wp('3.5%'),
-    textAlign: 'left',
-  },
-  lightPopupText: {
-    color: 'red', // Black color for light mode
-  },
-  darkPopupText: {
-    color: '#EEB0B0', // Light color for dark mode
-  },
-  popupCloseButton: {
-    position: 'absolute',
-    top: wp('2%'),
-    right: wp('3%'),
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    // borderTopWidth: 1,
-    paddingVertical: 10,
-    backgroundColor: '#f0f0f0',
-  },
-  darkFooter: {
-    backgroundColor: '#010A0C',
-    borderTopColor: '#555',
-  },
-  lightFooter: {
-    // backgroundColor: '#121212',
-    // borderTopColor: '#555',
-  },
-  footerItem: {
-    alignItems: 'center',
-  },
-  footerText: {
-    fontSize: 12,
-    marginTop: 4,
-  },
-  lightFooterText: {
-    color: '#000', // Black color for light mode
-  },
-  darkFooterText: {
-    color: '#FFF', // White color for dark mode
   },
 });
 
-export default ChatScreen;
+export default ProviderMessagesListScreen;

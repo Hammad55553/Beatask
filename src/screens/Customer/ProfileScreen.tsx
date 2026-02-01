@@ -21,6 +21,9 @@ import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-nat
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
 import LanguagePickerModal from '../../components/common/LanguagePickerModal';
+import CustomAlert from '../../components/common/CustomAlert';
+import CurrencyPickerModal from '../../components/common/CurrencyPickerModal';
+import { useCurrency } from '../../context/CurrencyContext';
 
 // Enable LayoutAnimation for Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -31,9 +34,11 @@ const ProfileScreen: React.FC = () => {
     const navigation = useNavigation();
     const { theme, isDarkMode, toggleTheme } = useTheme();
     const { t, isRTL, setLanguage, language } = useLanguage();
+    const { currency, setCurrency } = useCurrency();
 
     const [isLogoutPopupVisible, setLogoutPopupVisible] = useState(false);
     const [isLanguageModalVisible, setLanguageModalVisible] = useState(false);
+    const [isCurrencyModalVisible, setCurrencyModalVisible] = useState(false);
 
     // Animation refs
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -52,7 +57,6 @@ const ProfileScreen: React.FC = () => {
 
     const handleConfirmLogout = () => {
         setLogoutPopupVisible(false);
-        // Assuming SplashScreen or Login is the root
         navigation.reset({
             index: 0,
             routes: [{ name: 'Welcome' as never }],
@@ -144,11 +148,18 @@ const ProfileScreen: React.FC = () => {
                                 onPress={toggleTheme}
                             />
                             <SettingItem
-                                icon="earth"
+                                icon="translate"
                                 label={t('pr_language')}
-                                type="text"
-                                value={language === 'en' ? t('pr_english') : t('pr_urdu')}
+                                value={language === 'ur' ? 'اردو' : 'English'}
                                 onPress={() => setLanguageModalVisible(true)}
+                                type="text"
+                            />
+                            <SettingItem
+                                icon="currency-usd"
+                                label={t('pr_currency')}
+                                value={currency}
+                                onPress={() => setCurrencyModalVisible(true)}
+                                type="text"
                             />
                         </View>
                     </View>
@@ -191,47 +202,47 @@ const ProfileScreen: React.FC = () => {
                         <Text style={[styles.logoutLabel, { textAlign: isRTL ? 'right' : 'left' }]}>{t('pr_logout')}</Text>
                     </TouchableOpacity>
 
+                    {/* App Version */}
+                    <View style={styles.footer}>
+                        <Text style={[styles.versionText, { color: theme.colors.textSecondary }]}>Version 1.0.0</Text>
+                    </View>
+
                 </Animated.View>
             </ScrollView>
 
-            {/* Logout Confirmation Modal */}
-            <Modal transparent={true} visible={isLogoutPopupVisible} animationType="fade">
-                <View style={styles.modalOverlay}>
-                    <Animated.View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
-                        <View style={[styles.modalIcon, { backgroundColor: '#FF525215' }]}>
-                            <Icon name="alert-circle-outline" size={40} color="#FF5252" />
-                        </View>
-                        <Text style={[styles.modalTitle, { color: theme.colors.text }]}>{t('pr_logout')}</Text>
-                        <Text style={[styles.modalMessage, { color: theme.colors.textSecondary }]}>{t('pr_logout_confirm')}</Text>
-
-                        <View style={styles.modalButtons}>
-                            <TouchableOpacity
-                                style={[styles.modalBtn, { backgroundColor: theme.colors.border }]}
-                                onPress={() => setLogoutPopupVisible(false)}
-                            >
-                                <Text style={[styles.modalBtnText, { color: theme.colors.text }]}>No</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[styles.modalBtn, { backgroundColor: '#FF5252' }]}
-                                onPress={handleConfirmLogout}
-                            >
-                                <Text style={[styles.modalBtnText, { color: '#FFF' }]}>Yes</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </Animated.View>
-                </View>
-            </Modal>
+            {/* Logout Confirmation CustomAlert */}
+            <CustomAlert
+                visible={isLogoutPopupVisible}
+                title={t('menu_logout')}
+                message={t('pr_logout_confirm')}
+                onConfirm={handleConfirmLogout}
+                onCancel={() => setLogoutPopupVisible(false)}
+                type="destructive"
+                confirmText={t('pr_logout')}
+                cancelText={t('pr_back')}
+            />
 
             {/* Language Selection Modal */}
             <LanguagePickerModal
                 visible={isLanguageModalVisible}
                 onClose={() => setLanguageModalVisible(false)}
                 onSelectLanguage={(lang) => {
-                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
                     setLanguage(lang);
                     setLanguageModalVisible(false);
                 }}
                 currentLanguage={language as 'en' | 'ur'}
+            />
+
+            {/* Currency Selection Modal */}
+            <CurrencyPickerModal
+                visible={isCurrencyModalVisible}
+                onClose={() => setCurrencyModalVisible(false)}
+                onSelectCurrency={(curr) => {
+                    setCurrency(curr);
+                    setCurrencyModalVisible(false);
+                }}
+                currentCurrency={currency}
+                isRTL={isRTL}
             />
         </View>
     );
@@ -349,11 +360,18 @@ const styles = StyleSheet.create({
         marginTop: 10,
     },
     logoutLabel: {
-        flex: 1,
-        fontSize: wp('4%'),
-        marginHorizontal: 16,
+        fontSize: 16,
         fontWeight: 'bold',
         color: '#FF5252',
+    },
+    footer: {
+        marginTop: 30,
+        marginBottom: hp('5%'),
+        alignItems: 'center',
+    },
+    versionText: {
+        fontSize: 14,
+        fontWeight: '500',
     },
     modalOverlay: {
         flex: 1,

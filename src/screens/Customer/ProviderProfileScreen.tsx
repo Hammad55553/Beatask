@@ -6,6 +6,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Animated, { FadeIn, FadeInDown, SlideInUp, useAnimatedScrollHandler, useSharedValue, useAnimatedStyle, interpolate, Extrapolate } from 'react-native-reanimated';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { useCurrency } from '../../context/CurrencyContext';
 
 const { width } = Dimensions.get('window');
 
@@ -22,13 +23,13 @@ const InfoBadge = ({ icon, text, theme }: any) => (
     </View>
 );
 
-const ServiceItem = ({ name, price, duration, theme }: any) => (
+const ServiceItem = ({ name, price, duration, theme, formatPrice }: any) => (
     <View style={[styles.serviceItem, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
         <View style={styles.serviceInfo}>
             <Text style={[styles.serviceName, { color: theme.colors.text }]}>{name}</Text>
             <Text style={[styles.serviceDuration, { color: theme.colors.textSecondary }]}>{duration}</Text>
         </View>
-        <Text style={[styles.servicePrice, { color: theme.colors.primary }]}>${price}</Text>
+        <Text style={[styles.servicePrice, { color: theme.colors.primary }]}>{formatPrice(price)}</Text>
         <TouchableOpacity style={[styles.addBtn, { borderColor: theme.colors.primary }]}>
             <Icon name="plus" size={16} color={theme.colors.primary} />
         </TouchableOpacity>
@@ -61,6 +62,7 @@ const ProviderProfileScreen = () => {
     const route = useRoute();
     const { theme, isDarkMode } = useTheme();
     const { t, isRTL } = useLanguage();
+    const { formatPrice } = useCurrency();
 
     // Params (if any)
     const { id } = route.params as { id: string } || {};
@@ -204,10 +206,10 @@ const ProviderProfileScreen = () => {
 
                     {activeTab === 'Services' && (
                         <Animated.View entering={FadeInDown.duration(400)}>
-                            <ServiceItem name="Deep Cleaning" price="120" duration="3 Hours" theme={theme} />
-                            <ServiceItem name="Lawn Mowing" price="50" duration="1 Hour" theme={theme} />
-                            <ServiceItem name="Standard Cleaning" price="80" duration="2 Hours" theme={theme} />
-                            <ServiceItem name="Interior Consulting" price="200" duration="Consultation" theme={theme} />
+                            <ServiceItem name="Deep Cleaning" price={120} duration="3 Hours" theme={theme} formatPrice={formatPrice} />
+                            <ServiceItem name="Lawn Mowing" price={50} duration="1 Hour" theme={theme} formatPrice={formatPrice} />
+                            <ServiceItem name="Standard Cleaning" price={80} duration="2 Hours" theme={theme} formatPrice={formatPrice} />
+                            <ServiceItem name="Interior Consulting" price={200} duration="Consultation" theme={theme} formatPrice={formatPrice} />
                         </Animated.View>
                     )}
 
@@ -237,7 +239,7 @@ const ProviderProfileScreen = () => {
                 <View style={{ alignItems: isRTL ? 'flex-end' : 'flex-start' }}>
                     <Text style={[styles.footerPriceLabel, { color: theme.colors.textSecondary }]}>{t('pp_starting_from')}</Text>
                     <View style={{ flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'baseline' }}>
-                        <Text style={[styles.footerPrice, { color: theme.colors.primary }]}>$20</Text>
+                        <Text style={[styles.footerPrice, { color: theme.colors.primary }]}>{formatPrice(20)}</Text>
                         <Text style={[styles.footerUnit, { color: theme.colors.textSecondary }]}>/ hr</Text>
                     </View>
                 </View>

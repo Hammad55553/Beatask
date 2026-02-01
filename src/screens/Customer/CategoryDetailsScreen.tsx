@@ -6,6 +6,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { useCurrency } from '../../context/CurrencyContext';
 
 interface Item {
     id: string;
@@ -83,7 +84,7 @@ const mockProviders: Item[] = [
     },
 ];
 
-const ProviderCard = ({ item, index, theme, onPress, t, isRTL }: any) => {
+const ProviderCard = ({ item, index, theme, onPress, t, isRTL, formatPrice }: any) => {
     const scale = useSharedValue(1);
 
     const animatedStyle = useAnimatedStyle(() => ({
@@ -116,7 +117,7 @@ const ProviderCard = ({ item, index, theme, onPress, t, isRTL }: any) => {
                     <View style={styles.imageWrapper}>
                         <Image source={item.image} style={styles.image} resizeMode="cover" />
                         <View style={[styles.priceBadge, { backgroundColor: theme.colors.primary }]}>
-                            <Text style={styles.priceValue}>${item.hourlyFrom}</Text>
+                            <Text style={styles.priceValue}>{formatPrice(item.hourlyFrom)}</Text>
                             <Text style={styles.priceUnit}>/hr</Text>
                         </View>
                     </View>
@@ -174,6 +175,7 @@ const CategoryDetailsScreen = () => {
     const route = useRoute();
     const { theme, isDarkMode } = useTheme();
     const { t, isRTL } = useLanguage();
+    const { formatPrice } = useCurrency();
 
     const { category } = (route.params as { category?: string }) || {};
     const title = category || t('cd_providers');
@@ -235,6 +237,7 @@ const CategoryDetailsScreen = () => {
                         t={t}
                         isRTL={isRTL}
                         onPress={() => handleProviderPress(item)}
+                        formatPrice={formatPrice}
                     />
                 )}
                 keyExtractor={(item) => item.id}

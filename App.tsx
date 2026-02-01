@@ -5,6 +5,7 @@ import SplashScreen from 'react-native-splash-screen';
 import RootNavigator from './src/navigation/RootNavigator';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { LanguageProvider } from './src/context/LanguageContext';
+import { CurrencyProvider } from './src/context/CurrencyContext';
 
 const AppContent = () => {
   const { isDarkMode, theme } = useTheme();
@@ -41,7 +42,9 @@ const App = () => {
   return (
     <ThemeProvider>
       <LanguageProvider>
-        <AppContent />
+        <CurrencyProvider>
+          <AppContent />
+        </CurrencyProvider>
       </LanguageProvider>
     </ThemeProvider>
   );

@@ -152,8 +152,8 @@ const RootNavigator = () => {
             <Stack.Screen name="Agreement" component={AgreementScreen} options={{ title: 'Agreement' }} />
 
             {/* Shared */}
-            <Stack.Screen name="Chat" component={ChatScreen} options={{ title: 'Chat' }} />
-            <Stack.Screen name="ProviderChat" component={ProviderChatScreen} options={{ title: 'Chat' }} />
+            <Stack.Screen name="Chat" component={ChatScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="ProviderChat" component={ProviderChatScreen} options={{ headerShown: false }} />
         </Stack.Navigator>
     );
 };

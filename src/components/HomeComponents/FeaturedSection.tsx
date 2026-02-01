@@ -5,6 +5,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
+import { useCurrency } from '../../context/CurrencyContext';
 
 interface Provider {
     id: string;
@@ -26,8 +27,9 @@ interface FeaturedSectionProps {
 
 const FeaturedSection: React.FC<FeaturedSectionProps> = ({ title, data, type }) => {
     const navigation = useNavigation();
-    const { isDarkMode, theme } = useTheme();
+    const { theme } = useTheme();
     const { t, isRTL } = useLanguage();
+    const { formatPrice } = useCurrency();
     const [likedItems, setLikedItems] = useState<{ [key: string]: boolean }>({});
 
     const toggleLike = (id: string) => {
@@ -101,10 +103,14 @@ const FeaturedSection: React.FC<FeaturedSectionProps> = ({ title, data, type }) 
                 <View style={[styles.cardFooter, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
                     {type !== 'provider' ? (
                         <View style={{ alignItems: isRTL ? 'flex-end' : 'flex-start' }}>
-                            <View style={[styles.priceRow, { flexDirection: isRTL ? 'row-reverse' : 'row' }]}>
-                                <Text style={[styles.currentPrice, { color: theme.colors.primary }]}>${item.price}</Text>
+                            <View style={[styles.priceRow, { flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center' }]}>
+                                <Text style={[styles.currentPrice, { color: theme.colors.primary }]}>
+                                    {formatPrice(Number(item.price) || 0)}
+                                </Text>
                                 {item.oldPrice && (
-                                    <Text style={styles.oldPrice}>${item.oldPrice}</Text>
+                                    <Text style={[styles.oldPrice, { marginHorizontal: 6 }]}>
+                                        {formatPrice(Number(item.oldPrice) || 0)}
+                                    </Text>
                                 )}
                             </View>
                         </View>

@@ -20,6 +20,8 @@ import { useNavigation } from '@react-navigation/native';
 import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { useTheme } from '../../context/ThemeContext';
 import { useLanguage } from '../../context/LanguageContext';
+import CustomAlert from '../../components/common/CustomAlert';
+import { useCurrency } from '../../context/CurrencyContext';
 
 // Enable LayoutAnimation for Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -85,7 +87,7 @@ const INITIAL_DATA: Provider[] = [
     }
 ];
 
-const ProviderCard = ({ item, index, theme, onRemove, t, isRTL, onPress }: any) => {
+const ProviderCard = ({ item, index, theme, onRemove, t, isRTL, onPress, formatPrice }: any) => {
     const scale = useSharedValue(1);
 
     const animatedStyle = useAnimatedStyle(() => ({
@@ -118,7 +120,7 @@ const ProviderCard = ({ item, index, theme, onRemove, t, isRTL, onPress }: any) 
                     <View style={styles.imageWrapper}>
                         <Image source={item.image} style={styles.image} resizeMode="cover" />
                         <View style={[styles.priceBadge, { backgroundColor: theme.colors.primary }]}>
-                            <Text style={styles.priceValue}>${item.hourlyFrom}</Text>
+                            <Text style={styles.priceValue}>{formatPrice(item.hourlyFrom)}</Text>
                             <Text style={styles.priceUnit}>/hr</Text>
                         </View>
                     </View>
@@ -175,10 +177,15 @@ const SavedProvidersScreen: React.FC = () => {
     const navigation = useNavigation();
     const { theme, isDarkMode } = useTheme();
     const { t, isRTL } = useLanguage();
+    const { formatPrice } = useCurrency();
 
     const [searchQuery, setSearchQuery] = useState('');
     const [savedProviders, setSavedProviders] = useState(INITIAL_DATA);
     const [filteredProviders, setFilteredProviders] = useState(INITIAL_DATA);
+
+    // Alert State
+    const [alertVisible, setAlertVisible] = useState(false);
+    const [providerToRemove, setProviderToRemove] = useState<string | null>(null);
 
     useEffect(() => {
         const filtered = savedProviders.filter(p =>
@@ -189,21 +196,17 @@ const SavedProvidersScreen: React.FC = () => {
     }, [searchQuery, savedProviders]);
 
     const handleRemove = (id: string) => {
-        Alert.alert(
-            t('sp_title'),
-            t('sp_remove_confirm'),
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Remove',
-                    style: 'destructive',
-                    onPress: () => {
-                        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                        setSavedProviders(prev => prev.filter(p => p.id !== id));
-                    }
-                }
-            ]
-        );
+        setProviderToRemove(id);
+        setAlertVisible(true);
+    };
+
+    const confirmRemove = () => {
+        if (providerToRemove) {
+            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+            setSavedProviders(prev => prev.filter(p => p.id !== providerToRemove));
+            setProviderToRemove(null);
+        }
+        setAlertVisible(false);
     };
 
     return (
@@ -251,6 +254,7 @@ const SavedProvidersScreen: React.FC = () => {
                             t={t}
                             isRTL={isRTL}
                             onPress={() => (navigation as any).navigate('ProviderProfile', { provider: item })}
+                            formatPrice={formatPrice}
                         />
                     )}
                     keyExtractor={item => item.id}
@@ -272,6 +276,17 @@ const SavedProvidersScreen: React.FC = () => {
                     </Text>
                 </View>
             )}
+
+            <CustomAlert
+                visible={alertVisible}
+                title={t('sp_title')}
+                message={t('sp_remove_confirm')}
+                onConfirm={confirmRemove}
+                onCancel={() => setAlertVisible(false)}
+                type="destructive"
+                confirmText="Remove"
+                cancelText="Keep it"
+            />
         </SafeAreaView>
     );
 };
